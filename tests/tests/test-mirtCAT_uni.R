@@ -142,5 +142,38 @@ test_that('unidimensional', {
     expect_equal(as.numeric(res$thetas), 0.1017891, tolerance = 1e-4)
     expect_equal(as.numeric(res$thetas_SE_history[nrow(res$thetas_SE_history),]),
                  0.3974447, tolerance = 1e-4)
+    
+    # content balancing
+    set.seed(1)
+    content <- c(rep('C1', 10), rep('C2', 10), rep('C3', 5))
+    content_prop <- c('C1'=.45, 'C2'=.35, 'C3'=.2)
+    res <- mirtCAT(shiny_questions, mod, item_answers=answers, local_pattern=pat, criteria='random',
+                   design = list(min_SEM = .4, content_prop=content_prop, content=content), 
+                   method = 'MAP') #should crash with 'seq'
+    so <- summary(res)
+    expect_equal(so$items_answered[1:5], c(1,14,25,10,17))
+    
+    content_prop <- c('C1'=.8, 'C2'=.1, 'C3'=.1)
+    res <- mirtCAT(shiny_questions, mod, item_answers=answers, local_pattern=pat, criteria='MI',
+                   design = list(min_SEM = .4, content_prop=content_prop, content=content), 
+                   method = 'MAP') 
+    so <- summary(res)
+    expect_equal(so$items_answered[1:5], c(1,20,2,3,24))
+    
+    #pass other args through ...
+    res <- mirtCAT(shiny_questions, mod, item_answers=answers, local_pattern=pat, 
+                   design = list(min_SEM = .4), method = 'EAP', criteria='KL', theta_lim = c(-1,1))
+    expect_equal(as.numeric(res$thetas), 0.4432854, tolerance = 1e-4)
+    expect_equal(as.numeric(res$thetas_SE_history[nrow(res$thetas_SE_history),]),
+                 0.3612738, tolerance = 1e-4)
+    
+    ## classification
+    res <- mirtCAT(shiny_questions, mod, item_answers=answers, local_pattern=pat, criteria='MI',
+                   design = list(classify = -0.5, classify_CI=.95))
+    so <- summary(res)
+    expect_true(so$classification == 'above cutoff')
+    expect_equal(as.numeric(res$thetas), 0.5866167, tolerance = 1e-4)
+    
+    
 })
 

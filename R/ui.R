@@ -1,6 +1,10 @@
 ui <- function(){
     
-    return(pageWithSidebar(
+    return(fluidPage(
+        
+        tags$head(
+            tags$style(HTML(MCE$shinyGUI$css))
+        ),
         
         #  Application title
         headerPanel(MCE$shinyGUI$title),
@@ -10,13 +14,13 @@ ui <- function(){
             h5(MCE$shinyGUI$author),
             hr(),
             h4("\nInstructions:"),
-            h6("To progress through the survey/test, click the \'Next\' button.")
+            h5("To progress through the survey/test, click on the button below."),            
+            actionButton("Next", "Next")
         ),
         
         mainPanel(
             imageOutput("item_stem", width = 'auto', height = 'auto'),
-            uiOutput("Main"),
-            actionButton("Next", "Next")    
+            uiOutput("Main")    
         )
         
     )) #end bootstrapPage

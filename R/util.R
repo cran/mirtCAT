@@ -1,4 +1,5 @@
 MCE <- new.env()
+MCE$complete <- TRUE
 
 calcLL <- function(thetas){
     LL <- 0
@@ -14,8 +15,10 @@ calcLL <- function(thetas){
 
 getAcovs <- function(possible_patterns, method){
     ret <- fscores(MCE$test$mirt_object, return.acov = TRUE, 
-                       method = method, 
-                       response.pattern = possible_patterns, mirtCAT=TRUE)
+                   method = method, response.pattern = possible_patterns, mirtCAT=TRUE,
+                   rotate = MCE$test$fscores_args$rotate, theta_lim = MCE$test$fscores_args$theta_lim,
+                   mean = MCE$test$fscores_args$mean, cov = MCE$test$fscores_args$cov, 
+                   MI = MCE$test$fscores_args$MI, quadpts = MCE$test$quadpts)
     ret <- lapply(ret, function(x, pick){
         x <- try(x[pick, pick, drop=FALSE])
         return(x)
@@ -127,4 +130,12 @@ slowTheHeckDown <- function(x = .1){
     p1 <- proc.time()
     Sys.sleep(x)
     proc.time() - p1
+}
+
+infoMatrix <- function(){
+    
+}
+
+testInfoMatrix <- function(){
+    
 }

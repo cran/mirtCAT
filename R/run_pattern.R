@@ -1,10 +1,11 @@
-run_local <- function(responses){
+run_local <- function(responses, verbose=FALSE, ...){
     
-    item <- findNextCATItem(person=MCE$person, test=MCE$test, lastitem=0L,
-                            criteria=MCE$design$criteria)
+    item <- findNextCATItem(person=MCE$person, test=MCE$test, design=MCE$design)
     MCE$person$items_answered[1L] <- item
     
     for(i in 2L:(length(responses)+1L)){
+        if(verbose) cat(sprintf('\rItem: %i; Thetas: %.3f; SE(Thetas): %.3f', i, MCE$person$thetas,
+                                MCE$person$thetas_SE_history[nrow(MCE$person$thetas_SE_history), ]))
         pick <- MCE$person$items_answered[i-1]
         name <- MCE$test$itemnames[pick]
         ip <- responses[pick]
@@ -22,10 +23,9 @@ run_local <- function(responses){
         
         MCE$design$Next.stage(item=i)
         
-        item <- findNextCATItem(person=MCE$person, test=MCE$test, lastitem=i-1L,
-                                criteria=MCE$design$criteria)
+        item <- findNextCATItem(person=MCE$person, test=MCE$test, design=MCE$design)
         MCE$person$items_answered[i] <- item
     }
-    
+    if(verbose) cat('\n')
     return(MCE$person)
 }

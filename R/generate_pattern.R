@@ -1,7 +1,7 @@
 #' Generate a CAT pattern
 #' 
 #' Generate a CAT pattern given various inputs. Returns a character or numeric vector 
-#' with length equal to the test size.
+#' with length equal to the test size, depending on whether a \code{choices} input was supplied.
 #' 
 #' @param mirt_object single group object defined by the \code{mirt} package
 #'
@@ -26,7 +26,7 @@
 #' pat <- generate_pattern(mod, Theta = 0, choices = choices, item_answers=answers)
 #' # mirtCAT(questions, mirt_object=mod, local_pattern = pat)
 #' 
-#' # generate pattern where 0 is the lowest possible response category
+#' # generate numeric pattern observed in dataset used to define mod
 #' pat2 <- generate_pattern(mod, Theta = 0)
 #' # mirtCAT(mirt_object=mod, local_pattern = pat2)
 #' 
@@ -43,7 +43,7 @@ generate_pattern <- function(mirt_object, Theta, choices = NULL, item_answers = 
             uniq <- 0L:(K[i]-1)
             pattern[i] <- sample(uniq, 1L, prob = P)
         }
-        return(as.numeric(pattern))
+        return(as.numeric(pattern + mirt_object@Data$mins))
     }
     ret <- character(nitems)
     K_1 <- do.call(c, lapply(choices, length)) - 1L

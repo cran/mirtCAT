@@ -8,7 +8,9 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                     lastpage = 'list',
                                     stem_locations = 'character',
                                     delete_png = 'logical',
-                                    demographic_inputIDs = 'character'),
+                                    demographic_inputIDs = 'character',
+                                    temp_file = 'character',
+                                    css = 'character'),
                       
                       methods = list(
                           initialize = function(questions, shinyGUI){
@@ -30,6 +32,8 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                                              selected = ''))
                               lastpage <<- list(h5("End of survey/test. Click \'Next\' to save
                                                        results and close application."))
+                              temp_file <<- ''
+                              css <<- ''
                                                  
                               if(length(shinyGUI)){
                                   if(!is.null(shinyGUI$title))
@@ -40,10 +44,18 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                       firstpage <<- shinyGUI$firstpage
                                   if(!is.null(shinyGUI$demographics)){
                                       demographics <<- shinyGUI$demographics
-                                      demographic_inputIDs <<- shinyGUI$demographics_inputIDs
+                                      if(length(shinyGUI$demographics)){
+                                          demographic_inputIDs <<- shinyGUI$demographics_inputIDs 
+                                      } else {
+                                          demographic_inputIDs <<- character(0)
+                                      }
                                   }
                                   if(!is.null(shinyGUI$lastpage)) 
                                       lastpage <<- shinyGUI$lastpage
+                                  if(!is.null(shinyGUI$temp_file))
+                                      temp_file <<- shinyGUI$temp_file
+                                  if(!is.null(shinyGUI$css))
+                                      css <<- shinyGUI$css
                               }
                           })
                       
