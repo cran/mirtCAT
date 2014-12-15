@@ -30,7 +30,8 @@ mirtCAT(questions = NULL, mirt_object = NULL, method = "MAP",
   questionnaires}
 
 \item{method}{argument passed to \code{mirt::fscores()} for computing new scores in the CAT
-  stage. Default is 'MAP'}
+  stage, with the addition of a \code{'fixed'} input to keep the latent trait estimates
+  fixed at the previous values. Default is 'MAP'}
 
 \item{criteria}{adaptive criteria used, default is to administer each item sequentially
   using \code{criteria = 'seq'}.
@@ -46,11 +47,13 @@ mirtCAT(questions = NULL, mirt_object = NULL, method = "MAP",
 
   Possible inputs for multidimensional adaptive tests include: \code{'Drule'}
   for the maximum determinant of the information matrix, \code{'Trule'} for the
-  maximum (potentially weighted) trace of the information matrix, \code{'Erule'} for the
-  minimum value of the information matrix, and \code{'Wrule'} for
+  maximum (potentially weighted) trace of the information matrix,
+  \code{'Arule'} for the minimum (potentially weighted) trace of the asymtotic covariance matrix,
+  \code{'Erule'} for the  minimum value of the information matrix, and \code{'Wrule'} for
   the weighted information criteria. For each of these rules, the posterior weight for
   the latent trait scores can also be included with the \code{'DPrule'}, \code{'TPrule'},
-  \code{'EPrule'}, \code{'WPrule'}, respectively. As a safety precaution, if the
+  \code{'APrule'}, \code{'EPrule'}, and \code{'WPrule'}, respectively.
+  As a safety precaution, if the
   selected criteria do not weight by the posterior (and therefore do not exist for
   extreme response styles) and less than 5 items have been administered then
   the method is temporarily switched to the posterior weighting
@@ -66,9 +69,11 @@ mirtCAT(questions = NULL, mirt_object = NULL, method = "MAP",
   are: \code{'random'} to randomly select items, and \code{'seq'} for selecting
   items sequentially.}
 
-\item{item_answers}{a character vector indicating which item should be considered 'correct'
-  when scoring individuals. Must be the length of the test, where \code{NA}s are used if the
-  item is not to be scored}
+\item{item_answers}{a character or list vector indicating which categories should be considered
+  'correct' when scoring individuals. Must be the length of the test, where \code{NA}s are used
+  if the item is not to be scored. A character vector input indicates that there is only
+  one correct respones per item, while a list of character vectors indicates that
+  multiple correct answers are possible.}
 
 \item{start_item}{a single number indicating which item should be used as the start item.
   Default is 1}
@@ -163,7 +168,7 @@ mirtCAT(questions = NULL, mirt_object = NULL, method = "MAP",
     \code{'Author of survey'}}
 
   \item{\code{firstpage}}{The first page of the shiny GUI. Default prints the title
-    and information message
+    and information message.
 
     \preformatted{
          list(h1('Welcome to the mirtCAT interface'),
@@ -171,6 +176,8 @@ mirtCAT(questions = NULL, mirt_object = NULL, method = "MAP",
               To cite the package use citation(\\'mirtCATd\\') in R.')
          }
       }
+
+   If an empty list is passed, this page will be skipped.
 
   \item{\code{demographics}}{The person information page used in the GUI for collecting
     demographic information generated using tools from the shiny package. The default
@@ -236,7 +243,7 @@ mirtCAT(questions = NULL, mirt_object = NULL, method = "MAP",
 
     \item{\code{criteria}}{selection criteria (see above). Default is 'random'}
 
-    \item{\code{method}}{selection criteria (see above). It is generally recommended to
+    \item{\code{method}}{estimation criteria (see above). It is generally recommended to
       select a method which can deal with all-or-none response patterns, such as 'EAP'
       or 'MAP', or in the multidimensional case 'DPrule' or 'TPrule'. Default is 'MAP'}
    }}

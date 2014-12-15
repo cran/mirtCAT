@@ -1,13 +1,8 @@
 FI <- function(mirt_item, Theta){
-    cls <- class(mirt_item)
-    
-    if(cls == 'dich'){
-        dP <- mirt:::DerivTheta(mirt_item, Theta)$grad[[2L]][1L,]
-        PQ <- prod(mirt:::ProbTrace(mirt_item, Theta))
-        ret <- outer(dP, dP) / PQ
-    } else {
-        stop('Fisher-information matrix not currently supported for supplied classes')
-    }
-
+    P <- mirt:::ProbTrace(mirt_item, Theta)
+    Pstar <- cumsum(P[,ncol(P):1L])[(ncol(P)-1L):1L]
+    PQ <- Pstar * (1 - Pstar)
+    a <- mirt:::ExtractLambdas(mirt_item)
+    ret <- outer(a, a) * sum(PQ)
     return(ret)
 }

@@ -1,11 +1,11 @@
 Test <- setRefClass("Test", 
                     
-                      fields = list(mirt_object = 'ConfirmatoryClass',
+                      fields = list(mirt_object = 'SingleGroupClass',
                                     ThetaGrid = 'matrix',
                                     density = 'numeric',
                                     quadpts = 'numeric',
                                     theta_range = 'numeric',
-                                    item_answers = 'character',
+                                    item_answers = 'list',
                                     item_options = 'list',
                                     item_class = 'character',
                                     itemnames = 'character',
@@ -19,15 +19,14 @@ Test <- setRefClass("Test",
                           initialize = function(mirt_object, item_answers_in, item_options,
                                                 quadpts_in, theta_range_in, dots){
                               tmpobj <- mirt_object
-                              if(is(tmpobj, 'ExploratoryClass'))
-                                  class(tmpobj) <- 'ConfirmatoryClass'
+                              tmpobj@exploratory <- FALSE
                               itemnames <<- colnames(tmpobj@Data$data)
                               tmpobj@Data$mins <- rep(0L, length(tmpobj@Data$min))
                               mirt_object <<- tmpobj
                               item_class <<- sapply(mirt_object@pars, class)
                               if(is.null(item_answers_in))
                                   item_answers_in <- as.character(rep(NA, length(itemnames)))
-                              item_answers <<- item_answers_in
+                              item_answers <<- as.list(item_answers_in)
                               item_options <<- item_options
                               length <<- length(item_answers)
                               nfact <<- tmpobj@nfact
@@ -37,20 +36,22 @@ Test <- setRefClass("Test",
                               else quadpts <<- quadpts_in
                               if(is.null(theta_range_in)) theta_range <<- c(-6, 6)
                               else theta_range <<- theta_range_in
+                              gp <<- mirt:::ExtractGroupPars(mirt_object@pars[[length + 1L]])
                               if(tmpobj@nfact == 1L){
                                   ThetaGrid <<- mirt:::thetaComb(seq(theta_range[1L],theta_range[2L], 
                                                                      length.out=quadpts),
                                                                  tmpobj@nfact)
-                                  density <<- mirt:::mirt_dmvnorm(ThetaGrid)
+                                  density <<- mirt:::mirt_dmvnorm(ThetaGrid, mean=gp$gmeans, 
+                                                                  sigma=gp$gcov)
                               }
                               tmp <- mirt_object@itemloc
                               itemloc2 <<- tmp[-length(tmp)]
-                              gp <<- mirt:::ExtractGroupPars(mirt_object@pars[[length + 1L]])
                               tmp <- list(rotate = 'none', theta_lim = c(-6,6), mean = gp$gmean,
                                                     cov=gp$gcov, MI = 0)
                               if(length(dots)){
                                   if(!is.null(dots$rotate))
-                                      tmp$rotate <- dots$rotate
+                                      warning('rotation not supported in mirtCAT. Using fixed
+                                           slope coefficients')
                                   if(!is.null(dots$theta_lim))
                                       tmp$theta_lim <- dots$theta_lim
                                   if(!is.null(dots$mean))

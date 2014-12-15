@@ -8,6 +8,9 @@ server <- function(input, output) {
         
         click <- input$Next
         
+        #skip first page?
+        if(!length(MCE$shinyGUI$firstpage)) click <- click + 1L
+        
         #first page, ask for demographics, etc
         if(click == 0L){
             return(MCE$shinyGUI$firstpage)
@@ -49,7 +52,7 @@ server <- function(input, output) {
                         which(MCE$test$item_options[[pick]] %in% ip) - 1L
                     if(!is.na(MCE$test$item_answers[[pick]]) && 
                            MCE$test$item_class[pick] != 'nestlogit')
-                        MCE$person$responses[pick] <- as.integer(ip == MCE$test$item_answers[[pick]])
+                        MCE$person$responses[pick] <- as.integer(ip %in% MCE$test$item_answers[[pick]])
                     
                     MCE$person$item_time[pick] <- proc.time()[3L] - MCE$start_time - 
                         sum(MCE$person$item_time)
