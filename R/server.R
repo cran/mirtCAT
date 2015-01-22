@@ -34,7 +34,7 @@ server <- function(input, output) {
                 MCE$person$demographics <- MCE$last_demographics
             if(MCE$shinyGUI$temp_file != '')
                 saveRDS(MCE$person, MCE$shinyGUI$temp_file)
-            return(list(h5("Click \'Next\' to start the survey.")))
+            return(list(h5("Click the action button to begin.")))
         }
         
         if(click == 3L) MCE$start_time <- proc.time()[3L]
@@ -42,36 +42,54 @@ server <- function(input, output) {
         itemclick <- sum(!is.na(MCE$person$items_answered))
         
         # run survey
-        if(click > 2L && !MCE$design$stop_now){
+        if(click > 2L && !MCE$design@stop_now){
             if(itemclick >= 1L){
                 pick <- MCE$person$items_answered[itemclick]
-                name <- MCE$test$itemnames[pick]
+                name <- MCE$test@itemnames[pick]
                 ip <- input[[name]]
+                if(is.null(ip)) ip <- input[[paste0(MCE$invalid_count, '.TeMpInTeRnAl',name)]]
                 if(!is.null(ip)){
                     MCE$person$raw_responses[pick] <- MCE$person$responses[pick] <- 
-                        which(MCE$test$item_options[[pick]] %in% ip) - 1L
-                    if(!is.na(MCE$test$item_answers[[pick]]) && 
-                           MCE$test$item_class[pick] != 'nestlogit')
-                        MCE$person$responses[pick] <- as.integer(ip %in% MCE$test$item_answers[[pick]])
+                        which(MCE$test@item_options[[pick]] %in% ip) - 1L
+                    if(!is.na(MCE$test@item_answers[[pick]]) && 
+                           MCE$test@item_class[pick] != 'nestlogit')
+                        MCE$person$responses[pick] <- as.integer(ip %in% MCE$test@item_answers[[pick]])
                     
                     MCE$person$item_time[pick] <- proc.time()[3L] - MCE$start_time - 
                         sum(MCE$person$item_time)
                     
                     #update Thetas
-                    MCE$person$Update.thetas()
+                    MCE$person$Update.thetas(MCE$design, MCE$test)
                     if(MCE$shinyGUI$temp_file != '')
                         saveRDS(MCE$person, MCE$shinyGUI$temp_file)
-                    if(itemclick > MCE$design$preCAT_nitems)
-                        MCE$design$Update.stop_now()
+                    MCE$design <- Update.stop_now(MCE$design, MCE$person)
+                } else {
+                    if(MCE$shinyGUI$forced_choice){
+                        MCE$shift_back <- MCE$shift_back + 1L
+                        MCE$invalid_count <- MCE$invalid_count + 1L
+                        tmp <- buildShinyElements(MCE$shinyGUI$df[pick,], 
+                                                  paste0(MCE$invalid_count, '.TeMpInTeRnAl',name))
+                        return(list(p(MCE$shinyGUI$df[pick, 'Question']), tmp$questions))
+                    } else {
+                        MCE$person$item_time[pick] <- proc.time()[3L] - MCE$start_time - 
+                            sum(MCE$person$item_time)
+                        #update Thetas (same as above)
+                        MCE$person$Update.thetas(MCE$design, MCE$test)
+                        if(MCE$shinyGUI$temp_file != '')
+                            saveRDS(MCE$person, MCE$shinyGUI$temp_file)
+                        MCE$design <- Update.stop_now(MCE$design, MCE$person)
+                        MCE$person$valid_item[pick] <- FALSE
+                    }
                 }
             } 
             
-            MCE$design$Next.stage(item=itemclick)
+            MCE$design <- Next.stage(MCE$design, person=MCE$person, test=MCE$test, item=itemclick)
             
-            if(!MCE$design$stop_now){
-                item <- findNextCATItem(person=MCE$person, test=MCE$test, design=MCE$design)
+            if(!MCE$design@stop_now){
+                item <- findNextCATItem(person=MCE$person, test=MCE$test, design=MCE$design,
+                                        start=FALSE)
                 MCE$person$items_answered[itemclick+1L] <- item
-                return(MCE$shinyGUI$questions[[item]])
+                return(list(p(MCE$shinyGUI$df[item,'Question']), MCE$shinyGUI$questions[[item]]))
             }
         }
         
@@ -90,12 +108,12 @@ server <- function(input, output) {
         
     output$item_stem <- renderImage({
         
-        click <- input$Next
+        click <- input$Next - MCE$shift_back
         if(click > 0L)
             if(!length(MCE$shinyGUI$demographics)) click <- click + 1L
             
         if(!MCE$STOP){
-            if(click > 2L && (click-2L) < MCE$test$length){
+            if(click > 2L && (click-2L) < MCE$test@length){
                 empty <- is.na(MCE$shinyGUI$stem_locations[[
                     MCE$person$items_answered[[click-2L]]]])
             } else empty <- TRUE
@@ -111,7 +129,9 @@ server <- function(input, output) {
                         height = 1,
                         alt = ""))
         } else {
-            return(list(src = MCE$shinyGUI$stem_locations[[click-2L]]))
+            return(list(src = MCE$shinyGUI$stem_locations[[click-2L]],
+                        width = MCE$shinyGUI$width,
+                        height = MCE$shinyGUI$height))
         }
         
     }, deleteFile = FALSE)

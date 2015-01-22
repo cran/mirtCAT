@@ -4,16 +4,16 @@
 #' @export
 print.mirtCAT <- function(x, ...){
     if(!all(is.na(x$thetas))){
-        person <- c(sum(!is.na(x$responses)),
+        person <- c(sum(!is.na(x$raw_responses)),
                           x$thetas[1L,],
-                          x$thetas_SE_history[nrow(x$thetas_SE_history),])        
+                          x$SE_thetas[1L,])        
         names(person) <- c('n.items.answered', paste0('Theta_', 1:length(x$thetas)),
                            paste0('SE.Theta_', 1:length(x$thetas)))
         ret <- t(as.data.frame(person))
         rownames(ret) <- ''
         return(ret)
     } else {
-        return(data.frame('n.items.answered' = sum(!is.na(x$responses))))
+        return(data.frame('n.items.answered' = sum(!is.na(x$raw_responses))))
     }
 }
 
@@ -25,24 +25,28 @@ print.mirtCAT <- function(x, ...){
 #'   for items that were not administered
 #' @export
 summary.mirtCAT <- function(object, sort = TRUE, ...){
+    if(!all(is.na(object$thetas))){
+        person <- rbind(object$thetas[1L,], object$SE_thetas)
+        rownames(person) <- c('Estimates', 'SEs')
+    } else person <- NULL
     pick <- if(sort){
         object$items_answered
     } else 1L:length(object$raw_responses)
     raw_responses <- object$raw_responses[pick]
-    responses <- object$responses[pick]
-    ret <- list(raw_responses=raw_responses,
-                responses=responses,
+    scored_responses <- object$scored_responses[pick]
+    ret <- list(final_estimates=person,
+                raw_responses=raw_responses,
+                scored_responses=scored_responses,
                 items_answered=object$items_answered,
                 thetas_history=object$thetas_history, 
                 thetas_SE_history=object$thetas_SE_history,
                 demographics=object$demographics)
-    if(length(object$item_time))
+    if(is.null(person)) ret$final_estimates <- NULL
+    if(all(is.na(scored_responses))) ret$scored_responses <- NULL
+    if(sum(object$item_time) > 0)
         ret$item_time <- object$item_time[pick]
     if(length(ret$thetas_history) == 1L || is.na(ret$thetas_history))
         ret$thetas_history <- ret$thetas_SE_history <- NULL
-    if(all(ret$raw_responses == ret$responses, na.rm = TRUE) || 
-           all((ret$raw_responses-1L) == ret$responses, na.rm = TRUE))
-        ret$raw_responses <- NULL
     if(!length(object$demographics))
         ret$demographics <- NULL
     if(!is.null(object$classification)){
@@ -96,6 +100,8 @@ plot.mirtCAT <- function(x, pick_theta = NULL, SE = 1, main = NULL, ...){
     tmp <- x$items_answered
     tmp <- rep(c(0,tmp[!is.na(tmp)]), nfact)
     thetaslong$item <- factor(tmp, levels = unique(tmp))
+    CV <- x$classify_values
+    if(!is.null(CV)) CV <- rep(CV, each = nrow(thetas))
     if(nfact > 1L){
         return(xyplot(F1 ~ item|thetas, data=thetaslong, 
                       main = main,
@@ -107,6 +113,10 @@ plot.mirtCAT <- function(x, pick_theta = NULL, SE = 1, main = NULL, ...){
                                         col=grey(.9), border = FALSE, ...)
                           panel.points(x, y, ...)
                           panel.lines(x, y, ...)
+                          if(!is.null(CV)){
+                              tmp <- CV[subscripts]
+                              panel.abline(h=tmp[1], col = 'red', ...)
+                          }
                       },
                       ylim=c(min(thetasSElowlong$F1)-.1, max(thetasSEhighlong$F1)+.1),
                       ylab = expression(theta), 
@@ -122,6 +132,8 @@ plot.mirtCAT <- function(x, pick_theta = NULL, SE = 1, main = NULL, ...){
                                         col=grey(.9), border = FALSE, ...)
                           panel.points(x, y, ...)
                           panel.lines(x, y, ...)
+                          if(!is.null(CV))
+                              panel.abline(h=CV[1], col = 'red', ...)
                       },
                       ylim=c(min(thetasSElowlong$F1)-.1, max(thetasSEhighlong$F1)+.1),
                       ylab = expression(theta), 

@@ -1,30 +1,59 @@
 #' Generate an adaptive or non-adaptive test HTML interface
 #' 
 #' Provides tools to generate an HTML interface for creating adaptive and 
-#' non-adaptive educational and psychological tests using the shiny package. Suitable for 
-#' applying unidimensional and multidimensional computerized adaptive tests using item 
-#' response theory methodology. Test scoring is performed using the \code{mirt} package.
+#' non-adaptive educational and psychological tests using the \code{shiny} package. 
+#' Suitable for applying unidimensional and multidimensional computerized adaptive tests 
+#' using item response theory methodology. Test scoring is performed using the \code{mirt} package.
 #' However, if no scoring is required (i.e., a standard survey) then defining a \code{mirt} 
 #' object may be omitted.
 #' 
-#' All tests will stop once the \code{'min_SEM'} criteria has been reached. If all questions should
-#' be answered, users should specify an extremely small \code{'min_SEM'} or equivalently 
-#' a large \code{'min_items'} criteria.
+#' All tests will stop once the \code{'min_SEM'} criteria has been reached or classification
+#' above or below the specified cutoffs can be made. If all questions should
+#' be answered, users should specify an extremely small \code{'min_SEM'} or, equivalently, 
+#' a large \code{'min_items'} criteria to the \code{design} list input.
 #' 
 #' @section HTML help files, exercises, and examples:
 #' 
 #' To access examples, vignettes, and exercise files that have been generated with knitr please
-#' visit \url{http://philchalmers.github.io/mirtCAT/mirtCAT-vignettes.html}.
+#' visit \url{https://github.com/philchalmers/mirtCAT/wiki}.
 #' 
-#' @param questions a named list containing \code{shiny} input definitions for each item. 
-#'   Each element of the input should be a list of the form 
-#'   \code{list(item1 = shinyInput(), item2 = shinyInput(), ...)}. 
-#'   Each \code{inputID} must be \bold{identical} to the column names used to define the data 
-#'   from the \code{mirt_object} input (if applicable)
+#' @param df a \code{data.frame} object containing the character vector inputs required to generate 
+#'   GUI questions through shiny. Each row in the object corresponds to a unique
+#'   item. The object supports the follow column name combinations as inputs to specify the 
+#'   type of response format, questions, options, answers, and stems:
 #'   
-#' @param mirt_object single group object defined by the \code{mirt} package. This is required
+#'   \describe{
+#'   
+#'     \item{\code{Type}}{Indicates the type of response input 
+#'       to use from the shiny package. The supported types are: 'radio' for radio buttons,
+#'       'radio_inline' for radio buttons that are organized horizontally,
+#'       'select' for a pull-down box for selecting inputs, or 'text' for requiring 
+#'       typed user input.} 
+#'     
+#'     \item{\code{Question}}{A character vector containing all the questions
+#'       or stems to be generated.} 
+#'       
+#'     \item{\code{Option.#}}{Column names pertaining to the possible response
+#'       options for each item, where the # corresponds to the specific category. For
+#'       instance, a test with 4 unique response options for each item would contain
+#'       the columns (\code{Option.1}, \code{Option.2}, \code{Option.3}, \code{Option.4}).
+#'       If, however, some items have fewer categories than others then \code{NA}'s can be used for response
+#'       options that do not apply.}
+#'       
+#'     \item{\code{Answer} or \code{Answer.#}}{(Optional) A character vector (or multiple character
+#'       vectors) indicating the scoring key for items that have correct answer(s). If there
+#'       is no correct answer for a question then a value of \code{NA} must be declared.}
+#'       
+#'     \item{\code{Stem}}{(Optional) a character vector of paths pointing to .png, .jpeg, or .gif
+#'       files to be used as graphical item stems. \code{NA}s are used if the item has no corresponding file.} 
+#'       
+#'   }
+#'   
+#' @param mo single group object defined by the \code{mirt::mirt()} function. This is required
 #'   if the test is to be scored adaptively or non-adaptively, but not required for general 
-#'   questionnaires
+#'   questionnaires. The object can be constructed by using the 
+#'   \code{\link{generate.mirt_object}} function if population parameters are known or by
+#'   including a calibrated model estimated from the \code{\link{mirt}} function with real data.
 #'   
 #' @param method argument passed to \code{mirt::fscores()} for computing new scores in the CAT 
 #'   stage, with the addition of a \code{'fixed'} input to keep the latent trait estimates
@@ -45,7 +74,7 @@
 #'   Possible inputs for multidimensional adaptive tests include: \code{'Drule'} 
 #'   for the maximum determinant of the information matrix, \code{'Trule'} for the 
 #'   maximum (potentially weighted) trace of the information matrix, 
-#'   \code{'Arule'} for the minimum (potentially weighted) trace of the asymtotic covariance matrix,
+#'   \code{'Arule'} for the minimum (potentially weighted) trace of the asymptotic covariance matrix,
 #'   \code{'Erule'} for the  minimum value of the information matrix, and \code{'Wrule'} for 
 #'   the weighted information criteria. For each of these rules, the posterior weight for 
 #'   the latent trait scores can also be included with the \code{'DPrule'}, \code{'TPrule'},
@@ -62,39 +91,31 @@
 #'   where \code{n} is the number of items previous answered), respectively. 
 #'   The \code{delta} criteria is defined in the \code{design} object
 #'   
-#'   Non-adaptive methods applicable even when no \code{mirt_object} is passed 
+#'   Non-adaptive methods applicable even when no \code{mo} is passed 
 #'   are: \code{'random'} to randomly select items, and \code{'seq'} for selecting 
 #'   items sequentially.
 #'   
-#' @param item_answers a character or list vector indicating which categories should be considered 
-#'   'correct' when scoring individuals. Must be the length of the test, where \code{NA}s are used 
-#'   if the item is not to be scored. A character vector input indicates that there is only
-#'   one correct respones per item, while a list of character vectors indicates that 
-#'   multiple correct answers are possible.
+#' @param start_item two possible inputs to determine the starting item are available. 
+#'   Passing a single number will indicate the specific item to be used as the start item;
+#'   default is 1, which selects the first item in the defined test/survey. 
+#'   If a character string is passed then the item will be selected from one of 
+#'   the item selections criteria available (see the \code{criteria} argument)
 #'   
-#' @param start_item a single number indicating which item should be used as the start item.
-#'   Default is 1
-#'   
-#' @param exposure a numeric vector specifying the amount of exposure control to apply for
-#'   each successive item. The default vector of 1's selects items which demonstrate 
-#'   the maximum CAT critiera (i.e., no exposure control), however if the item exposure 
-#'   is greater than 1, and \code{exposure[item] == n}, then the \code{n} most optimal
-#'   criteria will be randomly sampled from. For instance, if 
-#'   \code{exposure[5] == 3}, and \code{critiera = 'MI'}, then when the fifth item is to be 
-#'   selected from the remaining pool of items the top 3 candidate items demonstrating 
-#'   the largest information criteria will be sampled from. Naturally, the first and last 
-#'   elements of \code{exposure} are ignored since exposure control will be meaningless
-#' 
-#' @param local_pattern a character or numeric vector of response patterns 
+#' @param local_pattern a character/numeric matrix of response patterns 
 #'   used to run the CAT application without generating the GUI interface. 
-#'   This option requires a complete response pattern to be supplied. \code{local_pattern} 
-#'   is required to be numeric if no \code{questions} list is input, otherwise it must be a 
-#'   character vector of plausible responses
+#'   This option requires complete response pattern(s) to be supplied. \code{local_pattern} 
+#'   is required to be numeric if no \code{questions} are supplied, otherwise it must contain 
+#'   character values of plausible responses
+#'   
+#' @param cl an object definition to be passed to the parallel package 
+#'   (see \code{?parallel::parLapply} for details). If defined, and if 
+#'   \code{nrow(local_pattern) > 1}, then each row will be run in parallel to help 
+#'   decrease estimation times in simulation work
 #'   
 #' @param design_elements logical; return an object containing the test, person, and design 
 #'   elements? Primarily this is to be used with the \code{\link{findNextItem}} function
 #'   
-#' @param design a list of design based parameters for adaptive and non-adaptive tests. 
+#' @param design a list of design based control parameters for adaptive and non-adaptive tests. 
 #'   These can be
 #' 
 #' \describe{
@@ -119,21 +140,18 @@
 #'     integration grid. Used in conjunction with \code{quadpts} to generate an equally spaced 
 #'     quadrature grid. Default is \code{c(-6,6)}}
 #' 
-#'   \item{\code{Wrule_weights}}{weights used when \code{criteria == 'Wrule'}. The default 
+#'   \item{\code{weights}}{weights used when \code{criteria == 'Wrule'}, but also 
+#'     will be applied for weighted trace functions in the T- and A-rules. The default 
 #'     weights the latent dimensions equally. Default is \code{rep(1/nfact), nfact)}, 
-#'     where \code{nfact} is the number of test dimensions;  }
+#'     where \code{nfact} is the number of test dimensions}
 #'     
 #'   \item{\code{KL_delta}}{interval range used when \code{criteria = 'KL'}
 #'     or \code{criteria = 'KLn'}. Default is \code{0.1}}
 #'     
-#'   \item{\code{max_time}}{maximum time allowed for the generated GUI, measured
-#'     in seconds. For instance, if the test should stop after 10 minutes then the number 
-#'     600 should be passed (10 * 60). Default is \code{Inf}, therefore no time limit}
-#'     
 #'   \item{\code{content}}{an optional character vector indicating the type of content measured
 #'     by an item. Must be supplied in conjunction with \code{content_prop}}
 #'     
-#'   \item{\code{content_prop}}{an optional named numeric numeric vector indicating the 
+#'   \item{\code{content_prop}}{an optional named numeric vector indicating the 
 #'     distribution of item content proportions. A \code{content} vector must also be supplied
 #'     to indicate the item content membership. For instance, if \code{content} contains three
 #'     possible item content domains 'Addition', 'Subtraction', and 'Multiplication', and the 
@@ -147,11 +165,27 @@
 #'     }
 #'     
 #'   \item{\code{classify}}{a numeric vector indicating cut-off values for classification
-#'     above or below some prior threshold. Default does not use the classication scheme}
+#'     above or below some prior threshold. Default does not use the classification scheme}
 #'   
 #'   \item{\code{classify_CI}}{a numeric vector indicating the confident intervals used to 
 #'     classify individuals being above or below values in \code{classify}. Values must 
 #'     be between 0 and 1 (e.g., 0.95 gives 95\% confidence interval)}
+#'     
+#'   \item{\code{exposure}}{a numeric vector specifying the amount of exposure control to apply for
+#'     each successive item (length must equal the number of items). 
+#'     The default uses no exposure control. If the item exposure 
+#'     is greater than 1 then the \code{n} most optimal
+#'     criteria will be randomly sampled from. For instance, if 
+#'     \code{exposure[5] == 3}, and \code{critiera = 'MI'}, then when the fifth item is to be 
+#'     selected from the remaining pool of items the top 3 candidate items demonstrating 
+#'     the largest information criteria will be sampled from. Naturally, the first and last 
+#'     elements of \code{exposure} are ignored since exposure control will be meaningless.
+#'     
+#'     If all elements in \code{exposure} are between 0 and 1 then the Sympson-Hetter exposure 
+#'     control method will be implemented. In this method, an item is administered only if it 
+#'     passes a probability simulation experiment, otherwise it is removed from the item pool.
+#'     Values closer to 1 are more likely to appear in the test, while value closer to 0 are more
+#'     likely to be randomly discarded.}
 #'   
 #' }
 #' 
@@ -162,7 +196,16 @@
 #'     \code{'mirtCAT'}}
 #'   
 #'   \item{\code{authors}}{A character string for the author names. Default is 
-#'     \code{'Author of survey'}}
+#'     \code{'Author of survey'}. If the input is an empty string (\code{''}) then the author 
+#'     information will be omitted in the GUI}
+#'     
+#'   \item{\code{instructions}}{A three part character vector indicating how to use the GUI. 
+#'     Default is: 
+#'   
+#'     \preformatted{c("Instructions:", 
+#'        "To progress through the interface, click on the action button below.",
+#'        "Next")}
+#'   }
 #'
 #'   \item{\code{firstpage}}{The first page of the shiny GUI. Default prints the title
 #'     and information message. 
@@ -176,9 +219,9 @@
 #'       
 #'    If an empty list is passed, this page will be skipped.
 #' 
-#'   \item{\code{demographics}}{The person information page used in the GUI for collecting 
-#'     demographic information generated using tools from the shiny package. The default 
-#'     collects only the respondent gender using the format 
+#'   \item{\code{demographics}}{A person information page used in the GUI for collecting 
+#'     demographic information, generated using tools from the shiny package. For example,
+#'     the following code asks the participants about their Gender: 
 #'  
 #'     \preformatted{ 
 #'          list(selectInput(inputId = 'gender',
@@ -187,7 +230,7 @@
 #'                   selected = ''))
 #'         }
 #'         
-#'      To skip the demographics page, supply an empty list as the argument. 
+#'      By default, the demographics page is not included. 
 #'         
 #'      }
 #'      
@@ -195,9 +238,9 @@
 #'     input is used. Default is \code{demographics_inputIDs = 'gender'}, corresponding to
 #'     the \code{demographics} default}
 #'     
-#'   \item{\code{stem_locations}}{a character vector of paths pointing to .png, .jpeg, or .gif
-#'     files to be used as item stems. Must be the length of the test, where \code{NA}s are 
-#'     used if the item has no corresponding file}
+#'   \item{\code{max_time}}{maximum time allowed for the generated GUI, measured
+#'     in seconds. For instance, if the test should stop after 10 minutes then the number 
+#'     600 should be passed (10 * 60). Default is \code{Inf}, therefore no time limit}
 #'     
 #'   \item{\code{temp_file}}{a character vector indicating where a temporary .rds file 
 #'     containing the response information should be saved while the GUI is running. 
@@ -217,15 +260,19 @@
 #'   \item{\code{lastpage}}{Last message indicating that the test has been completed 
 #'     (i.e., criteria has been met). Default is 
 #'   
-#'     \preformatted{list(h5("End of survey. Click \'Next\' to save results 
-#'       and close application."))}
+#'     \preformatted{list(h5("You have successfully completed the interface. 
+#'       Click the action button to terminate the application."))}
 #'    }    
 #'    
 #'    \item{\code{css}}{a character string defining CSS elements to modify the GUI presentation 
 #'      elements. The input string is passed to the argument \code{tags$style(HTML(shinyGUI$css))}
-#'      prior to constructing the user interface
-#'    
-#'    }
+#'      prior to constructing the user interface}
+#'      
+#'    \item{\code{stem_dims}}{numeric vector of length 2 corresponding to image stem width 
+#'      (in pixels). Default is \code{c(1000, 1000)} for the width and height}
+#'      
+#'    \item{\code{forced_choice}}{logical; require a response to each item? Default is \code{TRUE}.
+#'      This should only be set to \code{FALSE} for surveys (not CATs)}
 #'   
 #' }
 #' 
@@ -235,19 +282,28 @@
 #'   to use the \code{preCAT} input:
 #'   
 #'   \describe{
-#'     \item{\code{nitems}}{number of items to administer before the CAT session begins.
-#'       An input greater than 0 is required}
+#'     \item{\code{min_items}}{minimum number of items to administer before the CAT session begins.
+#'       Default is 0}
+#'       
+#'     \item{\code{max_items}}{max number of items to administer before the CAT session begins.
+#'       An input greater than 0 is required to run the preCAT stage}
 #'     
 #'     \item{\code{criteria}}{selection criteria (see above). Default is 'random'}
 #'     
 #'     \item{\code{method}}{estimation criteria (see above). It is generally recommended to 
 #'       select a method which can deal with all-or-none response patterns, such as 'EAP'
 #'       or 'MAP', or in the multidimensional case 'DPrule' or 'TPrule'. Default is 'MAP'}
-#'    }
+#'       
+#'     \item{\code{response_variance}}{logical; terminate the preCAT stage when there is variability in the 
+#'       response pattern (i.e., when maximum-likelihood estimation contains a potential optimum)?
+#'       Default is FALSE}
+#' }
 #' 
 #' @export mirtCAT
+#' 
 #' @author Phil Chalmers \email{rphilip.chalmers@@gmail.com}
-#' @seealso \code{\link{generate_pattern}}
+#' 
+#' @seealso \code{\link{generate_pattern}}, \code{\link{generate.mirt_object}}
 #' 
 #' @return Returns a list object of class \code{'Person'} containing the following elements:
 #'   
@@ -255,13 +311,16 @@
 #'   \item{\code{raw_responses}}{A numeric vector indicating the raws responses to the respective
 #'     items, where NA indicates the item was not answered}
 #'     
-#'   \item{\code{responses}}{A numeric vector of scored responses if the \code{item_answers} input
+#'   \item{\code{scored_responses}}{A numeric vector of scored responses if the \code{item_answers} input
 #'     was used for each respective item}
 #'   
 #'   \item{\code{items_answered}}{An integer vector indicating the order in which the items were 
 #'     answered}
 #'   
 #'   \item{\code{thetas}}{A numeric vector indicating the final theta estimates}
+#'   
+#'   \item{\code{SE_thetas}}{A numeric vector indicating the standard errors of the 
+#'     final theta estimates}
 #'   
 #'   \item{\code{thetas_history}}{A matrix indicating the progression of updating the theta values
 #'     during the test}
@@ -275,6 +334,10 @@
 #'   \item{\code{demographics}}{A data.frame object containing the information collected on the 
 #'     first page of the shiny GUI. This is used to store the demographic information for each
 #'     participant} 
+#'     
+#'   \item{\code{classification}}{A character vector indicating whether the traits could be 
+#'     classified as 'above' or 'below' the desired cutoffs}
+#'     
 #' }
 #' 
 #' @keywords CAT, MCAT, computerized adaptive testing
@@ -282,65 +345,76 @@
 #' @examples
 #' \dontrun{
 #' 
-#' # unidimensional scored example with generated items
+#' ### unidimensional scored example with generated items
 #' 
-#' # model
+#' # create mo from estimated parameters
 #' set.seed(1234)
 #' nitems <- 50
 #' itemnames <- paste0('Item.', 1:nitems)
 #' a <- matrix(rlnorm(nitems, .2, .3))
 #' d <- matrix(rnorm(nitems))
 #' dat <- simdata(a, d, 1000, itemtype = 'dich')
-#' colnames(dat) <- itemnames
 #' mod <- mirt(dat, 1)
+#' coef(mod, simplify=TRUE)
+#' 
+#' # alternatively, define mo from population values (not run)
+#' pars <- data.frame(a1=a, d=d)
+#' mod2 <- generate.mirt_object(pars, itemtype='2PL')
+#' coef(mod2, simplify=TRUE)
 #' 
 #' # simple math items
-#' shiny_questions <- questions <- vector('list', nitems)
-#' names(shiny_questions) <- names(questions) <- itemnames
-#' answers <- character(nitems)
-#' choices <- vector('list', nitems)
+#' questions <- answers <- character(nitems)
+#' choices <- matrix(NA, nitems, 5)
 #' spacing <- floor(d - min(d)) + 1 #easier items have more variation in the options
 #' 
 #' for(i in 1:nitems){
 #'     n1 <- sample(1:50, 1)
 #'     n2 <- sample(51:100, 1)
 #'     ans <- n1 + n2
-#'     questions[[i]] <- paste0(n1, ' + ', n2, ' = ?')
+#'     questions[i] <- paste0(n1, ' + ', n2, ' = ?')
 #'     answers[i] <- as.character(ans)
 #'     ch <- ans + sample(c(-5:-1, 1:5) * spacing[i,], 5)
 #'     ch[sample(1:5, 1)] <- ans
-#'     choices[[i]] <- as.character(ch)
+#'     choices[i, ] <- as.character(ch)
 #' }
 #' 
-#' for(i in 1L:nitems){
-#'     shiny_questions[[i]] <- radioButtons(inputId = itemnames[i],
-#'                                          label = questions[[i]],
-#'                                          choices = choices[[i]])
-#' }
+#' df <- data.frame(Question=questions, Option=choices, 
+#'                               Type = 'radio', stringsAsFactors = FALSE)
+#' head(df)
 #' 
-#' (res <- mirtCAT(shiny_questions)) #collect response only (no scoring or estimating thetas)
-#' (res <- mirtCAT(shiny_questions, mod, item_answers=answers)) #sequential scoring 
-#' (res <- mirtCAT(shiny_questions, mod, item_answers=answers, criteria = 'random')) #random
-#' (res <- mirtCAT(shiny_questions, mod, item_answers=answers, criteria = 'MI')) #adaptive
+#' (res <- mirtCAT(df)) #collect response only (no scoring or estimating thetas)
+#' summary(res)
+#' 
+#' # include scoring by providing Answer key
+#' df$Answer <- answers
+#' (res_seq <- mirtCAT(df, mod)) #sequential scoring 
+#' (res_random <- mirtCAT(df, mod, criteria = 'random')) #random
+#' (res_MI <- mirtCAT(df, mod, criteria = 'MI', start_item = 'MI')) #adaptive, MI starting item
+#' 
+#' summary(res_seq)
+#' summary(res_random)
+#' summary(res_MI)
 #' 
 #' #-----------------------------------------
 #' 
 #' # run locally, random response pattern given Theta
 #' set.seed(1)
-#' pat <- generate_pattern(mod, Theta = 0, choices = choices, item_answers=answers)
+#' pat <- generate_pattern(mod, Theta = 0, df=df)
 #' head(pat)
-#' res <- mirtCAT(shiny_questions, mod, item_answers=answers, local_pattern=pat) #seq
+#' 
+#' # seq scoring with character pattern for the entire test (adjust min_items)
+#' res <- mirtCAT(df, mod, local_pattern=pat, design = list(min_items = 50)) 
 #' summary(res)
 #' 
-#' # same as above, but using special input vector that doesn't require shiny
+#' # same as above, but using special input vector that doesn't require df input
 #' set.seed(1)
 #' pat2 <- generate_pattern(mod, Theta = 0)
 #' head(pat2)
-#' print(mirtCAT(mirt_object=mod, local_pattern=pat2))
+#' print(mirtCAT(mo=mod, local_pattern=pat2))
 #' 
-#' # run CAT, and save results to object called person
-#' person <- mirtCAT(shiny_questions, mod, item_answers=answers, criteria = 'MI', 
-#'   local_pattern=pat)
+#' # run CAT, and save results to object called person (start at 10th item)
+#' person <- mirtCAT(df, mod, item_answers = answers, criteria = 'MI', 
+#'                   start_item = 10, local_pattern = pat)
 #' print(person)
 #' summary(person)
 #' 
@@ -352,64 +426,89 @@
 #'
 #' ### save response object to temp directory in case session ends early
 #' wdf <- paste0(getwd(), '/temp_file.rds')
-#' res <- mirtCAT(shiny_questions, mod, item_answers=answers, shinyGUI=list(temp_file=wdf))
+#' res <- mirtCAT(df, mod, shinyGUI = list(temp_file = wdf))
 #' 
 #' # resume test this way if test was stopped early (and temp files were saved)
-#' res <- mirtCAT(shiny_questions, mod, item_answers=answers, shinyGUI=list(resume_file=wdf))
+#' res <- mirtCAT(df, mod, shinyGUI = list(resume_file = wdf))
 #' print(res)
 #' 
 #' }
-mirtCAT <- function(questions = NULL, mirt_object = NULL, method = 'MAP', criteria = 'seq', 
-                    item_answers = NULL, start_item = 1, exposure = rep(1, length(questions)), 
-                    local_pattern = NULL, design_elements=FALSE,
+mirtCAT <- function(df, mo, method = 'MAP', criteria = 'seq', 
+                    start_item = 1, local_pattern = NULL, design_elements=FALSE, cl=NULL,
                     design = list(), shinyGUI = list(), preCAT = list(), ...)
-{    
+{   
     on.exit({MCE$person <- MCE$test <- MCE$design <- MCE$shinyGUI <- MCE$start_time <- 
                 MCE$STOP <- MCE$outfile <- MCE$last_demographics <- NULL})
-    if(is.null(questions)){
-        questions <- vector('list', ncol(mirt_object@Data$data))
-        Names <- colnames(mirt_object@Data$data)
+    Names <- if(!missing(mo)) colnames(mo@Data$data) else NULL
+    if(missing(df)){
+        if(missing(mo)) stop('No df or mo supplied')
+        if(is.null(local_pattern)) stop('missing df input, and no local_pattern supplied')
+        questions <- vector('list', ncol(mo@Data$data))
         names(questions) <- Names
-        K <- mirt_object@Data$K
+        K <- mo@Data$K
+        item_options <- vector('list', length(K))
         for(i in 1L:length(K))
-            questions[[i]] <- selectInput(inputId = Names[i], label = '', 
-                                          choices = as.character(0L:(K[i]-1L)))
+            item_options[[i]] <- as.character(0L:(K[i]-1L))
+        df <- data.frame()
         item_answers <- NULL
+    } else {
+        if(!is.data.frame(df))
+            stop('df input must be a data.frame')
+        if(any(sapply(df, class) == 'factor')){
+            dfold <- df
+            df <- data.frame(sapply(dfold, as.character), stringsAsFactors = FALSE)
+            if(!all(df == dfold)) 
+                stop('Coercion of df elements to characters modified one or more elements. 
+                     When building the df with the data.frame() function pass the 
+                     option stringsAsFactors = FALSE to avoid this issue')
+        }
+        obj <- buildShinyElements(df, itemnames = Names)
+        questions <- obj$questions
+        item_answers <- obj$item_answers
+        item_options <- obj$item_options
+        shinyGUI$stem_locations <- df$Stem
     }
-        
-    if(is.null(names(questions)))
-        stop('questions list must have names')
-    if(is.null(mirt_object)){
+    if(missing(mo)){
         dat <- matrix(c(0,1), 2L, length(questions))
         colnames(dat) <- names(questions)
-        mirt_object <- mirt(dat, 1L, TOL=NaN)
+        mo <- mirt(dat, 1L, TOL=NaN)
         score <- FALSE
         if(!(criteria %in% c('seq', 'random')))
-            stop('Only random and seq criteria are available if no mirt_object was defined')
-        mirt_mins <- rep(1L, ncol(dat))
+            stop('Only random and seq criteria are available if no mo was defined')
+        mirt_mins <- rep(0L, ncol(dat))
     } else {
         score <- TRUE
-        mirt_mins <- mirt_object@Data$mins
+        mirt_mins <- mo@Data$mins
     }
-    if(!is.null(local_pattern))
+    if(!is.null(local_pattern)){
+        if(!is.matrix(local_pattern)) local_pattern <- matrix(local_pattern, 1L)
         if(is.numeric(local_pattern))
-            local_pattern <- local_pattern - mirt_mins
-    itemnames <- colnames(mirt_object@Data$data)
-    if(length(itemnames) != length(questions) || !all(itemnames %in% names(questions)))
-        stop('Item names for mirt_object and questions do not match')
-    item_options <- lapply(questions, extract_choices)
+            local_pattern <- t(t(local_pattern) - mirt_mins)
+    }
     
     #setup objects
-    shinyGUI_object <- ShinyGUI$new(questions=questions, shinyGUI=shinyGUI)
-    test_object <- Test$new(mirt_object=mirt_object, item_answers_in=item_answers, 
+    if(!missing(df)) shinyGUI$stem_locations <- df$Stem
+    if(is.null(local_pattern)) 
+        shinyGUI_object <- ShinyGUI$new(questions=questions, df=df, shinyGUI=shinyGUI)
+    test_object <- new('Test', mo=mo, item_answers_in=item_answers, 
                      item_options=item_options, quadpts_in=design$quadpts,
                      theta_range_in=design$theta_range, dots=list(...))
-    design_object <- Design$new(method=method, criteria=criteria, start_item=start_item,
-                         nfact=test_object$nfact, design=design, exposure=exposure,
-                         preCAT=preCAT, nitems=test_object$length)
-    person_object <- Person$new(nfact=test_object$nfact, nitems=length(test_object$itemnames), 
-                         thetas.start_in=design$thetas.start, score=score)
-    if(!is.null(shinyGUI$resume_file)){
+    design_object <- new('Design', method=method, criteria=criteria, 
+                         start_item=if(is.numeric(start_item)) start_item else NaN,
+                         max_time=shinyGUI$max_time, 
+                         nfact=test_object@nfact, design=design, 
+                         preCAT=preCAT, nitems=test_object@length)
+    person_object <- Person$new(nfact=test_object@nfact, nitems=length(test_object@itemnames), 
+                         thetas.start_in=design$thetas.start, score=score, 
+                         theta_SEs=sqrt(diag(test_object@gp$gcov)))
+    if(is.character(start_item)){
+        tmp <- design_object@criteria
+        design_object@criteria <- start_item
+        start_item <- findNextCATItem(person_object, test_object, design_object, start=FALSE)
+        design_object@start_item <- start_item
+        design_object@criteria <- tmp
+    }
+    if(is.null(local_pattern) && !is.null(shinyGUI$resume_file)){
         person_object <- readRDS(shinyGUI$resume_file)
         MCE$last_demographics <- person_object$demographics
         shinyGUI_object$demographics <- list()
@@ -422,42 +521,56 @@ mirtCAT <- function(questions = NULL, mirt_object = NULL, method = 'MAP', criter
         return(ret)
     }
     
-    #put in specific enviroment
+    #put in specific enviroment (move later TODO) 
     MCE$person <- person_object
     MCE$test <- test_object
     MCE$design <- design_object
-    MCE$shinyGUI <- shinyGUI_object
     MCE$STOP <- FALSE
     MCE$outfile <- tempfile(fileext='.png')
+    MCE$shift_back <- 0L
+    MCE$invalid_count <- 0L
     
-    if(length(local_pattern)){
-        person <- run_local(as.character(local_pattern), ...)
-        person$item_time <- numeric(0)
-    } else {
+    if(is.null(local_pattern)){
+        MCE$shinyGUI <- shinyGUI_object
         runApp(list(ui = ui(), server = server), launch.browser=TRUE)
         person <- MCE$person
+    } else {
+        person <- run_local(local_pattern, nfact=test_object@nfact, start_item=start_item,
+                            nitems=length(test_object@itemnames), cl=cl,
+                            thetas.start_in=design$thetas.start, score=score, 
+                            design=design_object, test=test_object, ...)
     }
-    person$items_answered <- person$items_answered[!is.na(person$items_answered)]
-    ret <- list(raw_responses=person$raw_responses + 1L, 
-                responses=as.numeric(person$responses + mirt_mins),
-                items_answered=person$items_answered,
-                thetas=person$thetas,
-                thetas_history=person$thetas_history,
-                thetas_SE_history=person$thetas_SE_history,
-                item_time=person$item_time,
-                demographics=person$demographics)
-    if(!is.null(design$classify)){
-        z <- -abs(ret$thetas - design$classify) / 
-            ret$thetas_SE_history[nrow(ret$thetas_SE_history),]
-        sig <- z < qnorm((1-design$classify_CI)/2)
-        direction <- ifelse((ret$thetas - design$classify) > 0, 'above cutoff', 'below cutoff') 
-        direction[!sig] <- 'no decision'
-        ret$classification <- direction
+    if(!is.list(person)) person <- list(person)
+    ret.out <- vector('list', length(person))
+    for(i in 1L:length(person)){
+        person[[i]]$items_answered <- person[[i]]$items_answered[!is.na(person[[i]]$items_answered)]
+        ret <- list(raw_responses=person[[i]]$raw_responses + 1L, 
+                    scored_responses=if(!is.null(item_answers) || missing(df)) 
+                        as.numeric(person[[i]]$responses + mirt_mins) 
+                        else as.numeric(rep(NA, length(mirt_mins))),
+                    items_answered=person[[i]]$items_answered,
+                    thetas=person[[i]]$thetas,
+                    SE_thetas=person[[i]]$thetas_SE_history[nrow(person[[i]]$thetas_SE_history), 
+                                                            ,drop=FALSE],
+                    thetas_history=person[[i]]$thetas_history,
+                    thetas_SE_history=person[[i]]$thetas_SE_history,
+                    item_time=person[[i]]$item_time,
+                    demographics=person[[i]]$demographics)
+        if(!is.null(design$classify)){
+            z <- -abs(ret$thetas - design$classify) / ret$SE_thetas
+            sig <- z < qnorm((1-design$classify_CI)/2)
+            direction <- ifelse((ret$thetas - design$classify) > 0, 'above cutoff', 'below cutoff')
+            direction[!sig] <- 'no decision'
+            ret$classification <- direction
+            ret$classify_values <- design$classify
+        }
+        colnames(ret$thetas) <- colnames(ret$SE_thetas) <- colnames(ret$thetas_history) <-
+            colnames(ret$thetas_SE_history) <- paste0('Theta_', 1L:test_object@nfact)
+        if(!person[[i]]$score)
+            ret$thetas <- ret$SE_thetas <- ret$thetas_history <- ret$thetas_SE_history <- NA
+        class(ret) <- 'mirtCAT'
+        ret.out[[i]] <- ret
     }
-    colnames(ret$thetas) <- colnames(ret$thetas_history) <-
-        colnames(ret$thetas_SE_history) <- paste0('Theta_', 1L:MCE$test$nfact)
-    if(!person$score)
-        ret$thetas <- ret$thetas_history <- ret$thetas_SE_history <- NA
-    class(ret) <- 'mirtCAT'
-    ret
+    if(length(ret.out) == 1L) return(ret.out[[1L]]) 
+    return(ret.out)
 }

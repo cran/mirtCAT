@@ -7,41 +7,37 @@ test_that('ordered', {
     
     set.seed(1234)
     pat <- generate_pattern(mod, Theta = 0)
-    expect_equal(c(3,2,3,2), pat)
-    res <- mirtCAT(mirt_object = mod, local_pattern = pat)
+    expect_equal(c(3,2,3,2), pat[1,])
+    res <- mirtCAT(mo = mod, local_pattern = pat)
     so <- summary(res)
-    expect_equal(as.numeric(so$responses), c(3,2,3,2))
+    expect_equal(as.numeric(so$raw_responses), c(3,2,3,2))
     expect_equal(print(res)[2], -0.694133, tolerance=1e-4)
     
-    shiny_questions <- questions <- vector('list', nitems)
-    names(shiny_questions) <- names(questions) <- itemnames
     choices <- c('SD', 'D', 'A', 'SA')
-    choices <- list(choices, choices, choices, choices)
-    
-    for(i in 1L:nitems){
-        shiny_questions[[i]] <- radioButtons(inputId = itemnames[i],
-                                             label = 'Dummy',
-                                             choices = choices[[i]])
-    }
+    df <- data.frame(Type = 'radio', Question = as.character(1:nitems), stringsAsFactors = FALSE)
+    df$Option.1 <- 'SD'
+    df$Option.2 <- 'D'
+    df$Option.3 <- 'A'
+    df$Option.4 <- 'SA'
     
     set.seed(1234)
-    pat <- generate_pattern(mod, Theta = 0, choices = choices)
+    pat <- generate_pattern(mod, Theta = 0, df=df)
     expect_equal(c('A', 'D', 'A', 'D'), pat)
     
-    res <- mirtCAT(shiny_questions, mod, local_pattern = pat)
+    res <- mirtCAT(df, mod, local_pattern = pat)
     so <- summary(res)
-    expect_equal(as.numeric(so$responses), c(3,2,3,2))
+    expect_equal(as.numeric(so$raw_responses), c(3,2,3,2))
     expect_equal(print(res)[2], -0.694133, tolerance=1e-4)
     
-    res <- mirtCAT(shiny_questions, local_pattern = pat)
+    res <- mirtCAT(df, local_pattern = pat)
     so <- summary(res)
-    expect_equal(as.numeric(so$responses), c(3,2,3,2))
+    expect_equal(as.numeric(so$raw_responses), c(3,2,3,2))
     
-    res <- mirtCAT(shiny_questions, mod, local_pattern = pat, criteria = 'MI', method = 'ML')
+    res <- mirtCAT(df, mod, local_pattern = pat, criteria = 'MI', method = 'ML')
     so <- summary(res)
-    expect_equal(as.numeric(so$responses), c(3,2,2,3))
+    expect_equal(as.numeric(so$raw_responses), c(3,2,2,3))
     
-    CATdesign <- mirtCAT(shiny_questions, design_elements = TRUE)
+    CATdesign <- mirtCAT(df, design_elements = TRUE)
     expect_equal(findNextItem(CATdesign), 1L) 
     CATdesign$person$responses[c(1,2)] <- c(4L, 4L)
     CATdesign$person$items_answered[c(1,2)] <- c(1L, 2L)
@@ -49,9 +45,9 @@ test_that('ordered', {
     expect_equal(findNextItem(CATdesign), 3L) 
     
     mod2 <- mirt(Science, 2, TOL=NaN)
-    res <- mirtCAT(shiny_questions, mod2, local_pattern = pat, criteria = 'Drule')
+    res <- mirtCAT(df, mod2, local_pattern = pat, criteria = 'Drule')
     so <- summary(res)
-    expect_equal(as.numeric(so$responses), c(3,2,2,3))
+    expect_equal(as.numeric(so$raw_responses), c(3,2,2,3))
     
     # MD
     set.seed(1)
@@ -67,13 +63,13 @@ test_that('ordered', {
     mod <- mirt(dat, model, pars = sv, TOL=NaN)
     
     pat <- generate_pattern(mod, Theta = c(-0.5, 0.5))
-    res <- mirtCAT(mirt_object = mod, local_pattern = pat, criteria = 'Drule')
+    res <- mirtCAT(mo = mod, local_pattern = pat, criteria = 'Drule')
     so <- summary(res)
     expect_equal(nrow(so$thetas_history), 22)
     expect_equal((so$items_answered), c(1,61,4,56,11,70,31,15,95,19,68,39,55,18,92,21,93,48,83,40,8))
     
-    res <- mirtCAT(mirt_object = mod, local_pattern = pat, criteria = 'Drule', start_item = 10,
-                   preCAT = list(method = 'fixed', nitems = 5, criteria = 'KL'), 
+    res <- mirtCAT(mo = mod, local_pattern = pat, criteria = 'Drule', start_item = 10,
+                   preCAT = list(method = 'fixed', max_items = 5, criteria = 'KL'), 
                    design = list(thetas.start = c(-0.5, 0.5)))
     so <- summary(res)
     expect_equal((so$items_answered), c(10,61,70,56,1,4,31,11,95,15,68,19,39,55,18,92,21,93,48,83,40))
@@ -85,14 +81,38 @@ test_that('ordered', {
     sv$value[sv$name == 'a2'] <- a[,2]
     sv$value[sv$name %in% c('d1', 'd2', 'd3', 'd4')] <- as.numeric(t(d))
     mod <- mirt(dat, model, itemtype = 'gpcm', pars = sv, TOL=NaN)
-    
+        
     set.seed(1234)
     pat <- generate_pattern(mod, Theta = c(0,0))
-    res <- mirtCAT(mirt_object = mod, local_pattern = pat, criteria = 'Drule', 
+    res <- mirtCAT(mo = mod, local_pattern = pat, criteria = 'Drule', 
                    design = list(min_SEM=0.2))
     so <- summary(res)
-    expect_equal((so$items_answered), c(1,61,11,70,4,31,56,39,83,15,92,95,50,68,21,55,18,93,
-                                        43,40,48,19,96,44,59,25,87,20,8,89,73))
+    expect_equal((so$items_answered), c(1,61,11,4,70,31,39,56,50,15,83,21,18,92,95,68,43,55,93,40,
+                                        48,19,44,96,25,20,59,12,87,8,89,30,90))
     expect_equal(as.numeric(so$thetas_history[nrow(so$thetas_history), ]), 
-                 c(-0.08138413, -0.29611701), tolerance = 1e-4)
+                 c(-0.05521666, -0.23028118), tolerance = 1e-4)
+    
+    # generate.mirt_object tests
+    set.seed(1)
+    nitems <- 50
+    a1 <- rlnorm(nitems, .2,.2)
+    d <- rnorm(nitems)
+    g <- rbeta(nitems, 20, 80)
+    pars <- data.frame(a1=a1, d=d, g=g)
+    obj <- generate.mirt_object(pars, '3PL')
+    expect_is(obj, 'SingleGroupClass')
+    cfs <- coef(obj, simplify=TRUE, digits = 50)
+    expect_equal(as.numeric(cfs[[1]][1:3, 1:2]), as.numeric(as.matrix(pars[1:3, 1:2])), 
+                 tolerance = 1e-10)
+    
+    #parallel test
+    require(parallel, quietly=TRUE, warn.conflicts=FALSE)
+    cl <- makeCluster(4)
+    pats <- generate_pattern(obj, Theta = matrix(c(-2,-1,1,2),4))
+    ret <- mirtCAT(mo=obj, local_pattern = pats, criteria = 'MI')
+    ret2 <- mirtCAT(mo=obj, local_pattern = pats, criteria = 'MI', cl=cl)
+    for(i in 1:4)
+        expect_true(as.numeric(ret[[i]]$thetas_SE_history[51,]) == 
+                         as.numeric(ret2[[i]]$thetas_SE_history[51,]))
+    stopCluster(cl)
 })

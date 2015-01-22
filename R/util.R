@@ -1,28 +1,16 @@
 MCE <- new.env()
 MCE$complete <- TRUE
 
-calcLL <- function(thetas){
-    LL <- 0
-    for(i in MCE$person$responses){
-        if(!is.na(MCE$person$responses)){
-            item <- extract.item(MCE$test$mirt_object, i)
-            P <- probtrace(item, thetas)
-            LL <- LL + log(P[ ,MCE$person$responses])
-        }
-    }
-    LL
-}
-
 getAcovs <- function(possible_patterns, method){
-    ret <- fscores(MCE$test$mirt_object, return.acov = TRUE, 
+    ret <- fscores(MCE$test@mo, return.acov = TRUE, 
                    method = method, response.pattern = possible_patterns, mirtCAT=TRUE,
-                   rotate = MCE$test$fscores_args$rotate, theta_lim = MCE$test$fscores_args$theta_lim,
-                   mean = MCE$test$fscores_args$mean, cov = MCE$test$fscores_args$cov, 
-                   MI = MCE$test$fscores_args$MI, quadpts = MCE$test$quadpts)
+                   rotate = MCE$test@fscores_args$rotate, theta_lim = MCE$test@fscores_args$theta_lim,
+                   mean = MCE$test@fscores_args$mean, cov = MCE$test@fscores_args$cov, 
+                   MI = MCE$test@fscores_args$MI, quadpts = MCE$test@quadpts)
     ret <- lapply(ret, function(x, pick){
         x <- try(x[pick, pick, drop=FALSE])
         return(x)
-    }, pick=!MCE$design$met_SEM)
+    }, pick=!MCE$design@met_SEM)
     ret    
 } 
 
@@ -132,10 +120,62 @@ slowTheHeckDown <- function(x = .1){
     proc.time() - p1
 }
 
-infoMatrix <- function(){
-    
+buildShinyElements <- function(questions, itemnames){
+    if(!is.data.frame(questions))
+        stop('questions input must be a data.frame')
+    if(!all(sapply(questions, class) == 'character')) 
+        stop('Only character classes are supported in questions input')
+    if(is.null(itemnames)) itemnames <- paste0('Item.', 1:nrow(questions))
+    names <- colnames(questions)
+    Qs_char <- questions$Question
+    Type <- questions$Type
+    if(is.null(Qs_char)) stop('Question column not specified')
+    if(is.null(Type)) stop('Type column not specified')
+    if(!all(Type %in% c('radio', 'radio_inline', 'select', 'text')))
+        stop('Type input in shiny_questions contains invalid arguments')
+    Qs <- vector('list', nrow(questions))
+    choices <- as.matrix(questions[,grepl('Option', names)])
+    colnames(choices) <- NULL
+    for(i in 1L:length(Qs)){
+        if(Type[i] %in% c('radio', 'radio_inline')){
+            cs <- na.omit(choices[i, ])
+            Qs[[i]] <- radioButtons(inputId = itemnames[i], label='',
+                                    inline = Type[i] == 'radio_inline',
+                                    choices = cs, selected = '')
+        } else if(Type[i] == 'select'){
+            cs <- na.omit(choices[i,])
+            Qs[[i]] <- selectInput(inputId = itemnames[i], label='', selected = '',
+                                    choices = na.omit(as.character(choices[i,])))
+        } else if(Type[i] == 'text'){
+            Qs[[i]] <- textInput(inputId = itemnames[i], label='', value = '')
+        }
+    }
+    pick <- questions[,grepl('Answer', names),drop=FALSE]
+    if(length(pick)){
+        item_answers <- split(pick, 1:nrow(pick))
+        item_answers <- lapply(item_answers, na.omit)
+    } else item_answers <- NULL
+    choices2 <- split(choices, 1:nrow(choices))
+    choices2 <- lapply(choices2, na.omit)
+    ret <- list(questions=Qs, item_answers=item_answers, item_options=choices2)
+    return(ret)
 }
 
-testInfoMatrix <- function(){
-    
+formatTime <- function(delta){
+    hours <- delta %/% 3600
+    mins <- delta %/% 60 - hours * 60
+    if(hours > 1){
+        h <- hours
+        m <- ifelse((mins %/% 30) == 1, 30, 0) 
+        out <- sprintf('More than %d hours and %d minutes.', h, m)
+    } else if(mins >= 15) {
+        m <- switch(as.character((mins %/% 15)),
+                    '3' = '45', '2' = '30', '1' = '15')
+        out <- sprintf('More than %s minutes.', m)
+    } else {
+        m <- switch(as.character((mins %/% 5) + 1),
+                    '3' = '15', '2' = '10', '1' = '5')
+        out <- sprintf('Less than %s minutes.', m)
+    }
+    out
 }
