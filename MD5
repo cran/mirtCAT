@@ -1,6 +1,6 @@
-1c2b38c103c6c51d9ce98ad59ff17724 *DESCRIPTION
+58e8e1cffee881df6fffb71a5dd50ec0 *DESCRIPTION
 3595f07e1df5c12ee599f32f96d872f3 *NAMESPACE
-ba013f6a269d2ecc2d6352e236146e04 *NEWS
+cdb0da700e75632c3f7f4104b6966d4b *NEWS
 35ae19e077393eaa69f0d2e3715036cc *R/DesignClass.R
 b491f61d4780a1b293bcfb9aeea40cf6 *R/FI.R
 1dee023815af9611c7a1732f44ee6082 *R/PersonClass.R
@@ -28,7 +28,7 @@ cd2678ca33a8f92476297c00f6308183 *inst/doc/mirtCAT-vignettes.Rmd
 82c49b7fd35fcbd2fae792ca208ea707 *man/mirtCAT-package.Rd
 9000696575bf9f7a4f32720f08da0550 *man/mirtCAT.Rd
 c63e9f9e5afd9e5a1eae698c0a59bcb4 *man/updateDesign.Rd
-28a9ab2f515dec2c50d647d2bfc53c7c *src/CAT_functions.cpp
+29f822df46a8c34f5e18fda9332f0b8d *src/CAT_functions.cpp
 489b262d4f81136a32f0bb09936fe53e *src/Makevars
 a73031cbe7d6aaf0bd22e20f6526977d *src/Makevars.win
 b31cd5ad965bdf1074fed93d36858105 *src/item_functions.cpp
