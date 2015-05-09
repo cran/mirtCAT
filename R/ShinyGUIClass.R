@@ -3,7 +3,7 @@ ShinyGUI <- setRefClass("ShinyGUI",
                       fields = list(title = 'character',
                                     author = 'character',
                                     questions = 'list',
-                                    df = 'data.frame',
+                                    df = 'list',
                                     firstpage = 'list',
                                     demographics = 'list',
                                     lastpage = 'list',
@@ -19,16 +19,33 @@ ShinyGUI <- setRefClass("ShinyGUI",
                       
                       methods = list(
                           initialize = function(questions, df, shinyGUI){
+                              'Initialize the shiny GUI given questions, df, and shinyGUI list'
                               questions <<- questions
                               df <<- df
                               forced_choice <<- TRUE
                               if(is.null(shinyGUI$stem_locations)){
                                   stem_locations <<- as.character(rep(NA, length(questions)))
-                              } else stem_locations <<- shinyGUI$stem_locations
+                              } else {
+                                  stem_locations <<- as.character(sapply(shinyGUI$stem_locations, 
+                                    function(x){                                        
+                                        ret <- if(!is.na(x)){
+                                            org <- x
+                                            exsts <- file.exists(x)
+                                            if(!exsts){
+                                                x <- paste0(getwd(), '/', x)
+                                                exsts <- file.exists(x)
+                                            }
+                                            if(!exsts) 
+                                                stop(sprintf('The following file cannot be located: %s', org), call.=FALSE)
+                                            normalizePath(x, mustWork = TRUE)
+                                        } else NA
+                                        return(ret)
+                                  }))
+                              }
                               delete_png <<- c(TRUE, TRUE, TRUE, is.na(stem_locations), 
                                                rep(TRUE, 20L))
                               title <<- 'mirtCAT'
-                              author <<- 'Authors of survey'
+                              author <<- 'Author information'
                               instructions <<- c("Instructions:",
                                                  "To progress through the interface, click on the action button below.",
                                                  "Next")
@@ -41,17 +58,15 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                                    Click the action button to terminate the application."))
                               temp_file <<- ''
                               css <<- ''
-                              width <<- 1000
-                              height <<- 1000
                                                  
                               if(length(shinyGUI)){
                                   dnames <- names(shinyGUI)
                                   gnames <- c('title', 'authors', 'instructions', 'firstpage', 'demographics',
                                               'demographics_inputIDs', 'max_time', 'temp_file', 'resume_file',
-                                              'lastpage', 'css', 'stem_dims', 'forced_choice')
+                                              'lastpage', 'css', 'stem_dims', 'forced_choice', 'stem_locations')
                                   if(!all(dnames %in% gnames))
                                       stop('The following inputs to shinyGUI are invalid: ',
-                                           paste0(dnames[!(dnames %in% gnames)], ' '))
+                                           paste0(dnames[!(dnames %in% gnames)], ' '), call.=FALSE)
                                   if(!is.null(shinyGUI$instructions))
                                       instructions <<- shinyGUI$instructions
                                   if(!is.null(shinyGUI$title))
@@ -72,10 +87,6 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                       temp_file <<- shinyGUI$temp_file
                                   if(!is.null(shinyGUI$css))
                                       css <<- shinyGUI$css
-                                  if(!is.null(shinyGUI$stem_dims)){
-                                      width <<- shinyGUI$stem_dims[1]
-                                      height <<- shinyGUI$stem_dims[2]
-                                  }
                               }
                           })
                       

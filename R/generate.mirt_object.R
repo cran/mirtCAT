@@ -23,6 +23,10 @@
 #'   
 #' @param key scoring key required for nested-logit models. See \code{\link{mirt}} for details
 #' 
+#' @param min_category the value representing the lowest category index. By default this is 0,
+#'   therefore the respond suitable for the first category is 0, second is 1, and so on up to 
+#'   \code{K - 1}
+#' 
 #' @export generate.mirt_object
 #' @author Phil Chalmers \email{rphilip.chalmers@@gmail.com}
 #' @seealso \code{\link{mirt}}, \code{\link{mirtCAT}}, \code{\link{generate_pattern}}
@@ -70,16 +74,17 @@
 #' 
 #' }
 generate.mirt_object <- function(parameters, itemtype, latent_means = NULL, 
-                                 latent_covariance = NULL, key = NULL){
+                                 latent_covariance = NULL, key = NULL, 
+                                 min_category = rep(0L, length(itemtype))){
     if(missing(itemtype))
-        stop('Must define an itemtype argument')
+        stop('Must define an itemtype argument', call.=FALSE)
     if(missing(parameters))
-        stop('Must define parameters argument')
+        stop('Must define parameters argument', call.=FALSE)
     parameters <- as.matrix(parameters)
     if(length(itemtype) == 1L)
         itemtype <- rep(itemtype, nrow(parameters))
     if(nrow(parameters) != length(itemtype))
-        stop('nrow(parameters) not equal to length(itemtype)')
+        stop('nrow(parameters) not equal to length(itemtype)', call.=FALSE)
     nitems <- length(itemtype)
     K <- integer(nitems)
     names <- colnames(parameters)    
@@ -97,7 +102,7 @@ generate.mirt_object <- function(parameters, itemtype, latent_means = NULL,
         } else if(itemtype[i] %in% c('graded', 'grsm', 'gpcm', 'nominal', '2PLNRM')){
             K[i] <- max(sapply(strsplit(nms[grepl('d', nms)], 'd'), function(x) as.numeric(x[2]))) + 1
         } else {
-            stop(sprintf('%s is an invalid itemtype argument. Please fix!', itemtype[i]))
+            stop(sprintf('%s is an invalid itemtype argument. Please fix!', itemtype[i]), call.=FALSE)
         }
     }
     dat <- matrix(c(0,1), 2L, nitems)
@@ -124,10 +129,11 @@ generate.mirt_object <- function(parameters, itemtype, latent_means = NULL,
         sv$value[sv$item == 'GROUP' & grepl('MEAN', sv$name)] <- as.numeric(latent_means)
     if(!is.null(latent_covariance)){
         if(!is.matrix(latent_covariance))
-            stop('latent_covariance input must be a matrix')
+            stop('latent_covariance input must be a matrix', call.=FALSE)
         vals <- latent_covariance[lower.tri(latent_covariance, TRUE)]
         sv$value[sv$item == 'GROUP' & grepl('COV', sv$name)] <- vals
     }
+    dat <- t(t(dat) + min_category)
     ret <- mirt(dat, model, itemtype=itemtype, technical=list(customK=K, warn=FALSE, message=FALSE), 
                 TOL=NaN, pars=sv, quadpts = 1, key=key, rotate = 'none')
     ret@exploratory <- FALSE

@@ -1,6 +1,7 @@
 #' Find next CAT item
 #' 
-#' A function that returns the next item in the computerized adaptive test. 
+#' A function that returns the next item in the computerized adaptive test. This should be used
+#' in conjunction with the \code{\link{updateDesign}} function.
 #' 
 #' @param x an object of class 'mirtCAT_design' returned from the \code{\link{mirtCAT}} function
 #'   when passing \code{design_elements = TRUE}
@@ -21,11 +22,16 @@
 #' 
 #' # detemine next item if item 1 and item 10 were answered correctly, and Theta = 0.5
 #' CATdesign <- updateDesign(CATdesign, items = c(1, 10), responses = c(1, 1), Theta = 0.5)
-#' findNextItem(CATdesign) 
+#' findNextItem(CATdesign)
+#' 
+#' # alternatively, update the Theta using the internal ReferenceClass method
+#' Person$help('Update.thetas') # internal help file for class 'Person'
+#' CATdesign$person$Update.thetas(CATdesign$design, CATdesign$test) 
+#' findNextItem(CATdesign)
 #' }
 findNextItem <- function(x){
     if(class(x) != 'mirtCAT_design')
-        stop('input is not the correct class')
+        stop('input is not the correct class', call.=FALSE)
     return(findNextCATItem(person=x$person, test=x$test, design=x$design))
 }
 
@@ -37,7 +43,9 @@ findNextCATItem <- function(person, test, design, start = TRUE){
         return(design@start_item)
     lastitem <- sum(!is.na(person$items_answered))
     not_answered <- is.na(person$responses)
+    not_answered[!person$valid_item] <- FALSE
     which_not_answered <- which(not_answered)
+    if(!length(which_not_answered)) stop('Ran out of items to administer.', call.=FALSE)
     K <- test@mo@Data$K
     if(criteria %in% c('MEI', 'MEPV', 'MLWI', 'MPWI', 'IKL', 'IKLP', 'IKLn', 'IKLPn')){
         possible_patterns <- matrix(person$responses, sum(K[not_answered]), 
@@ -49,7 +57,7 @@ findNextCATItem <- function(person, test, design, start = TRUE){
             row_loc[row:(row+length(resp)-1L)] <- ii
             for(j in 1L:length(resp)){
                 possible_patterns[row, ii] <- resp[j]
-                row <- row + 1L   
+                row <- row + 1L
             }
         }
     }
@@ -113,7 +121,7 @@ findNextCATItem <- function(person, test, design, start = TRUE){
         index <- which_not_answered
     } else if(criteria == 'MEPV'){
         crit <- -MEPV(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
-                    person=person, test=test, row_loc=row_loc, thetas=thetas)
+                    person=person, test=test, design=design, row_loc=row_loc, thetas=thetas)
         index <- which_not_answered
     } else if(criteria == 'MLWI'){
         crit <- MLWI(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
@@ -144,7 +152,7 @@ findNextCATItem <- function(person, test, design, start = TRUE){
                       design=design, thetas=thetas)
         index <- which_not_answered
     } else {
-        stop('Selection criteria does not exist')
+        stop('Selection criteria does not exist', call.=FALSE)
     }
     
     if(design@use_content){
@@ -185,5 +193,29 @@ findNextCATItem <- function(person, test, design, start = TRUE){
             }
         }
     } else item <- index[which(max(crit) == crit)][1L]
+    if(length(design@constraints)){
+        pick <- sapply(design@constraints, function(x, item){
+            any(item == x)
+        }, item=item)
+        constr <- design@constraints[pick]
+        if(any(names(constr) == 'independent')){
+            pick2 <- sapply(constr, c)[, 1L]
+            person$valid_item[pick2[pick2 != item]] <- FALSE
+        } else if(any(names(constr) == 'ordered')){
+            item <- constr[[1L]][1L]
+        }
+        prev <- last_item(person$items_answered)
+        pick <- sapply(design@constraints, function(x, item){
+            any(item == x)
+        }, item=prev)
+        tmp <- design@constraints[pick]$ordered
+        constr <- design@constraints[pick]
+        if(any(names(constr) == 'ordered')){
+            if(any(prev == tmp)){
+                tmp2 <- which(tmp == prev) + 1L
+                if(tmp2 <= length(tmp)) item <- tmp[tmp2]
+            }
+        }
+    }
     return(as.integer(item))
 }

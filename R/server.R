@@ -67,9 +67,9 @@ server <- function(input, output) {
                     if(MCE$shinyGUI$forced_choice){
                         MCE$shift_back <- MCE$shift_back + 1L
                         MCE$invalid_count <- MCE$invalid_count + 1L
-                        tmp <- buildShinyElements(MCE$shinyGUI$df[pick,], 
-                                                  paste0(MCE$invalid_count, '.TeMpInTeRnAl',name))
-                        return(list(p(MCE$shinyGUI$df[pick, 'Question']), tmp$questions))
+                        tmp <- lapply(MCE$shinyGUI$df, function(x, pick) x[pick], pick=pick)
+                        tmp <- buildShinyElements(tmp, paste0(MCE$invalid_count, '.TeMpInTeRnAl', name))
+                        return(list(MCE$shinyGUI$df$Question[[pick]], tmp$questions))
                     } else {
                         MCE$person$item_time[pick] <- proc.time()[3L] - MCE$start_time - 
                             sum(MCE$person$item_time)
@@ -89,7 +89,7 @@ server <- function(input, output) {
                 item <- findNextCATItem(person=MCE$person, test=MCE$test, design=MCE$design,
                                         start=FALSE)
                 MCE$person$items_answered[itemclick+1L] <- item
-                return(list(p(MCE$shinyGUI$df[item,'Question']), MCE$shinyGUI$questions[[item]]))
+                return(list(MCE$shinyGUI$df$Question[[item]], MCE$shinyGUI$questions[[item]]))
             }
         }
         
@@ -100,40 +100,43 @@ server <- function(input, output) {
                 saveRDS(MCE$person, MCE$shinyGUI$temp_file)
             return(MCE$shinyGUI$lastpage)
         } else {
+            if(!is.null(MCE$final_fun)){
+                ret <- mirtCAT_post_internal(person=MCE$person, design=MCE$design)
+                MCE$final_fun(person = ret)
+            }   
             stopApp()
             return(NULL)
         }
         
     }) 
         
-    output$item_stem <- renderImage({
+    output$item_stem_html <- renderUI({
         
         click <- input$Next - MCE$shift_back
         if(click > 0L)
             if(!length(MCE$shinyGUI$demographics)) click <- click + 1L
-            
+        
         if(!MCE$STOP){
             if(click > 2L && (click-2L) < MCE$test@length){
-                empty <- is.na(MCE$shinyGUI$stem_locations[[
-                    MCE$person$items_answered[[click-2L]]]])
+                file <- MCE$shinyGUI$stem_locations[[
+                    MCE$person$items_answered[[click-2L]]]]
+                empty <- is.na(file)
+                if(!empty){
+                    if(grepl('\\.[mM][dD]$', file)){
+                        suppressWarnings(markdown::markdownToHTML(file=file, output=MCE$outfile2, 
+                                                 fragment.only = TRUE))
+                        contents <- readLines(MCE$outfile2, warn = FALSE)
+                        return(HTML(contents))
+                    } else if(grepl('\\.[hH][tT][mM][lL]$', file)){
+                        contents <- readLines(file, warn = FALSE)
+                        return(HTML(contents))
+                    } else empty <- TRUE
+                }
             } else empty <- TRUE
         } else empty <- TRUE
         
-        if(empty){
-            outfile <- MCE$outfile
-            png(outfile, width=1, height=1)
-            dev.off()
-            return(list(src = outfile,
-                        contentType = 'image/png',
-                        width = 1,
-                        height = 1,
-                        alt = ""))
-        } else {
-            return(list(src = MCE$shinyGUI$stem_locations[[click-2L]],
-                        width = MCE$shinyGUI$width,
-                        height = MCE$shinyGUI$height))
-        }
+        return(' ')
         
-    }, deleteFile = FALSE)
+    })
     
 }

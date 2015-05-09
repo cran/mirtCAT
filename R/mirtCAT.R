@@ -17,8 +17,12 @@
 #' To access examples, vignettes, and exercise files that have been generated with knitr please
 #' visit \url{https://github.com/philchalmers/mirtCAT/wiki}.
 #' 
-#' @param df a \code{data.frame} object containing the character vector inputs required to generate 
-#'   GUI questions through shiny. Each row in the object corresponds to a unique
+#' @param df a \code{data.frame} or \code{list} object 
+#'   containing the \code{character} vector inputs required to generate 
+#'   GUI questions through shiny. If \code{factor}s are supplied instead of \code{character} vectors 
+#'   then the inputs will be coerced using the \code{as.character()} function (set 
+#'   \code{stringsAsFactors = FALSE} when defining a \code{data.frame} to avoid this). 
+#'   Each row in the object corresponds to a unique
 #'   item. The object supports the follow column name combinations as inputs to specify the 
 #'   type of response format, questions, options, answers, and stems:
 #'   
@@ -30,10 +34,12 @@
 #'       'select' for a pull-down box for selecting inputs, or 'text' for requiring 
 #'       typed user input.} 
 #'     
-#'     \item{\code{Question}}{A character vector containing all the questions
-#'       or stems to be generated.} 
+#'     \item{\code{Question}}{If \code{df} is a \code{data.frame}, a 
+#'       character vector containing all the questions or stems to be generated.
+#'       If \code{df} is a \code{list}, then the commands must be suitable for output with 
+#'       \code{shiny} (e.g., \code{Question <- list(h6('Item 1'), list(h6('Nested', h4(' item 2'))))})} 
 #'       
-#'     \item{\code{Option.#}}{Column names pertaining to the possible response
+#'     \item{\code{Option.#}}{Names pertaining to the possible response
 #'       options for each item, where the # corresponds to the specific category. For
 #'       instance, a test with 4 unique response options for each item would contain
 #'       the columns (\code{Option.1}, \code{Option.2}, \code{Option.3}, \code{Option.4}).
@@ -44,8 +50,9 @@
 #'       vectors) indicating the scoring key for items that have correct answer(s). If there
 #'       is no correct answer for a question then a value of \code{NA} must be declared.}
 #'       
-#'     \item{\code{Stem}}{(Optional) a character vector of paths pointing to .png, .jpeg, or .gif
-#'       files to be used as graphical item stems. \code{NA}s are used if the item has no corresponding file.} 
+#'     \item{\code{Stem}}{(Optional) a character vector of absolute or relative paths 
+#'       pointing external markdown (.md) or HTML (.html) files to be used as item stems. 
+#'       \code{NA}s are used if the item has no corresponding file.} 
 #'       
 #'   }
 #'   
@@ -104,8 +111,10 @@
 #' @param local_pattern a character/numeric matrix of response patterns 
 #'   used to run the CAT application without generating the GUI interface. 
 #'   This option requires complete response pattern(s) to be supplied. \code{local_pattern} 
-#'   is required to be numeric if no \code{questions} are supplied, otherwise it must contain 
-#'   character values of plausible responses
+#'   is required to be numeric if no \code{questions} are supplied, and the responses must be 
+#'   within a valid range of the defined \code{mo} object.
+#'   Otherwise, it must contain character values of plausible responses which corresponds to the
+#'   answer key and/or options supplied in \code{df}
 #'   
 #' @param cl an object definition to be passed to the parallel package 
 #'   (see \code{?parallel::parLapply} for details). If defined, and if 
@@ -119,10 +128,14 @@
 #'   These can be
 #' 
 #' \describe{
-#'   \item{\code{min_SEM}}{Default is \code{0.3}; minimum standard error or measurement
+#'   \item{\code{min_SEM}}{Default is \code{rep(0.3, nfact)}; minimum standard error or measurement
 #'     to be reached for the latent traits (thetas) before the test is stopped. If the test is
 #'     multidimensional, either a single value or a vector of values may be supplied to provide
 #'     SEM criteria values for each dimension}
+#'     
+#'   \item{delta_thetas}{Default is \code{rep(0, nfact)}; stopping criteria based on the change in latent
+#'     trait values (e.g., a change from \code{theta = 1.5} to \code{theta = 1.54} would 
+#'     stop the CAT if \code{delta_thetas = 0.05}). The default disables this stopping criteria}
 #'     
 #'   \item{\code{thetas.start}}{a numeric vector of starting values for the theta parameters.
 #'     Default is \code{rep(0, nfact)}}
@@ -186,6 +199,24 @@
 #'     passes a probability simulation experiment, otherwise it is removed from the item pool.
 #'     Values closer to 1 are more likely to appear in the test, while value closer to 0 are more
 #'     likely to be randomly discarded.}
+#'     
+#'   \item{\code{constraints}}{A named list declaring various item selection contraints for which
+#'     particular item, where each list element is a vector of item numbers. These include:
+#'     
+#'     \describe{
+#'          \item{\code{not_scored}}{declaring items that can be selected but will not be used in the 
+#'            scoring of the CAT. This is primarily useful when including experimental items for
+#'            future CATs.}
+#'          \item{\code{independent}}{declaring which items should never appear in the same CAT session.
+#'            Use this if, for example, item 1 and item 10 have very similar questions 
+#'            types and therefore should not appear within the same session}
+#'          \item{\code{ordered}}{if one item is selected during the CAT, adminster this 
+#'            particular group of items in order according to the specified sequence}
+#'          \item{\code{unordered}}{same as ordered, except the items in the group will be selected at 
+#'            random until the group is complete}
+#'     }
+#'   
+#'   }
 #'   
 #' }
 #' 
@@ -267,9 +298,6 @@
 #'    \item{\code{css}}{a character string defining CSS elements to modify the GUI presentation 
 #'      elements. The input string is passed to the argument \code{tags$style(HTML(shinyGUI$css))}
 #'      prior to constructing the user interface}
-#'      
-#'    \item{\code{stem_dims}}{numeric vector of length 2 corresponding to image stem width 
-#'      (in pixels). Default is \code{c(1000, 1000)} for the width and height}
 #'      
 #'    \item{\code{forced_choice}}{logical; require a response to each item? Default is \code{TRUE}.
 #'      This should only be set to \code{FALSE} for surveys (not CATs)}
@@ -433,144 +461,30 @@
 #' print(res)
 #' 
 #' }
-mirtCAT <- function(df, mo, method = 'MAP', criteria = 'seq', 
+mirtCAT <- function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq', 
                     start_item = 1, local_pattern = NULL, design_elements=FALSE, cl=NULL,
                     design = list(), shinyGUI = list(), preCAT = list(), ...)
 {   
     on.exit({MCE$person <- MCE$test <- MCE$design <- MCE$shinyGUI <- MCE$start_time <- 
-                MCE$STOP <- MCE$outfile <- MCE$last_demographics <- NULL})
-    Names <- if(!missing(mo)) colnames(mo@Data$data) else NULL
-    if(missing(df)){
-        if(missing(mo)) stop('No df or mo supplied')
-        if(is.null(local_pattern)) stop('missing df input, and no local_pattern supplied')
-        questions <- vector('list', ncol(mo@Data$data))
-        names(questions) <- Names
-        K <- mo@Data$K
-        item_options <- vector('list', length(K))
-        for(i in 1L:length(K))
-            item_options[[i]] <- as.character(0L:(K[i]-1L))
-        df <- data.frame()
-        item_answers <- NULL
-    } else {
-        if(!is.data.frame(df))
-            stop('df input must be a data.frame')
-        if(any(sapply(df, class) == 'factor')){
-            dfold <- df
-            df <- data.frame(sapply(dfold, as.character), stringsAsFactors = FALSE)
-            if(!all(df == dfold)) 
-                stop('Coercion of df elements to characters modified one or more elements. 
-                     When building the df with the data.frame() function pass the 
-                     option stringsAsFactors = FALSE to avoid this issue')
-        }
-        obj <- buildShinyElements(df, itemnames = Names)
-        questions <- obj$questions
-        item_answers <- obj$item_answers
-        item_options <- obj$item_options
-        shinyGUI$stem_locations <- df$Stem
-    }
-    if(missing(mo)){
-        dat <- matrix(c(0,1), 2L, length(questions))
-        colnames(dat) <- names(questions)
-        mo <- mirt(dat, 1L, TOL=NaN)
-        score <- FALSE
-        if(!(criteria %in% c('seq', 'random')))
-            stop('Only random and seq criteria are available if no mo was defined')
-        mirt_mins <- rep(0L, ncol(dat))
-    } else {
-        score <- TRUE
-        mirt_mins <- mo@Data$mins
-    }
-    if(!is.null(local_pattern)){
-        if(!is.matrix(local_pattern)) local_pattern <- matrix(local_pattern, 1L)
-        if(is.numeric(local_pattern))
-            local_pattern <- t(t(local_pattern) - mirt_mins)
-    }
-    
-    #setup objects
-    if(!missing(df)) shinyGUI$stem_locations <- df$Stem
-    if(is.null(local_pattern)) 
-        shinyGUI_object <- ShinyGUI$new(questions=questions, df=df, shinyGUI=shinyGUI)
-    test_object <- new('Test', mo=mo, item_answers_in=item_answers, 
-                     item_options=item_options, quadpts_in=design$quadpts,
-                     theta_range_in=design$theta_range, dots=list(...))
-    design_object <- new('Design', method=method, criteria=criteria, 
-                         start_item=if(is.numeric(start_item)) start_item else NaN,
-                         max_time=shinyGUI$max_time, 
-                         nfact=test_object@nfact, design=design, 
-                         preCAT=preCAT, nitems=test_object@length)
-    person_object <- Person$new(nfact=test_object@nfact, nitems=length(test_object@itemnames), 
-                         thetas.start_in=design$thetas.start, score=score, 
-                         theta_SEs=sqrt(diag(test_object@gp$gcov)))
-    if(is.character(start_item)){
-        tmp <- design_object@criteria
-        design_object@criteria <- start_item
-        start_item <- findNextCATItem(person_object, test_object, design_object, start=FALSE)
-        design_object@start_item <- start_item
-        design_object@criteria <- tmp
-    }
-    if(is.null(local_pattern) && !is.null(shinyGUI$resume_file)){
-        person_object <- readRDS(shinyGUI$resume_file)
-        MCE$last_demographics <- person_object$demographics
-        shinyGUI_object$demographics <- list()
-        shinyGUI_object$firstpage <- list()
-        shinyGUI_object$demographic_inputIDs <- character(0)
-    }
+                MCE$STOP <- MCE$outfile <- MCE$outfile2 <- MCE$last_demographics <- NULL})
+    mirtCAT_preamble(df=df, mo=mo, method=method, criteria=criteria, 
+                     start_item=start_item, local_pattern=local_pattern, 
+                     design_elements=design_elements, cl=cl,
+                     design=design, shinyGUI=shinyGUI, preCAT=preCAT, ...)
     if(design_elements){
-        ret <- list(person=person_object, test=test_object, design=design_object)
+        ret <- list(person=MCE$person, test=MCE$test, design=MCE$design)
         class(ret) <- "mirtCAT_design"
         return(ret)
     }
-    
-    #put in specific enviroment (move later TODO) 
-    MCE$person <- person_object
-    MCE$test <- test_object
-    MCE$design <- design_object
-    MCE$STOP <- FALSE
-    MCE$outfile <- tempfile(fileext='.png')
-    MCE$shift_back <- 0L
-    MCE$invalid_count <- 0L
-    
     if(is.null(local_pattern)){
-        MCE$shinyGUI <- shinyGUI_object
-        runApp(list(ui = ui(), server = server), launch.browser=TRUE)
+        runApp(createShinyGUI(), launch.browser=TRUE)
         person <- MCE$person
     } else {
-        person <- run_local(local_pattern, nfact=test_object@nfact, start_item=start_item,
-                            nitems=length(test_object@itemnames), cl=cl,
-                            thetas.start_in=design$thetas.start, score=score, 
-                            design=design_object, test=test_object, ...)
+        person <- run_local(MCE$local_pattern, nfact=MCE$test@nfact, start_item=start_item,
+                            nitems=length(MCE$test@itemnames), cl=cl,
+                            thetas.start_in=design$thetas.start, score=MCE$score, 
+                            design=MCE$design, test=MCE$test, ...)
     }
-    if(!is.list(person)) person <- list(person)
-    ret.out <- vector('list', length(person))
-    for(i in 1L:length(person)){
-        person[[i]]$items_answered <- person[[i]]$items_answered[!is.na(person[[i]]$items_answered)]
-        ret <- list(raw_responses=person[[i]]$raw_responses + 1L, 
-                    scored_responses=if(!is.null(item_answers) || missing(df)) 
-                        as.numeric(person[[i]]$responses + mirt_mins) 
-                        else as.numeric(rep(NA, length(mirt_mins))),
-                    items_answered=person[[i]]$items_answered,
-                    thetas=person[[i]]$thetas,
-                    SE_thetas=person[[i]]$thetas_SE_history[nrow(person[[i]]$thetas_SE_history), 
-                                                            ,drop=FALSE],
-                    thetas_history=person[[i]]$thetas_history,
-                    thetas_SE_history=person[[i]]$thetas_SE_history,
-                    item_time=person[[i]]$item_time,
-                    demographics=person[[i]]$demographics)
-        if(!is.null(design$classify)){
-            z <- -abs(ret$thetas - design$classify) / ret$SE_thetas
-            sig <- z < qnorm((1-design$classify_CI)/2)
-            direction <- ifelse((ret$thetas - design$classify) > 0, 'above cutoff', 'below cutoff')
-            direction[!sig] <- 'no decision'
-            ret$classification <- direction
-            ret$classify_values <- design$classify
-        }
-        colnames(ret$thetas) <- colnames(ret$SE_thetas) <- colnames(ret$thetas_history) <-
-            colnames(ret$thetas_SE_history) <- paste0('Theta_', 1L:test_object@nfact)
-        if(!person[[i]]$score)
-            ret$thetas <- ret$SE_thetas <- ret$thetas_history <- ret$thetas_SE_history <- NA
-        class(ret) <- 'mirtCAT'
-        ret.out[[i]] <- ret
-    }
-    if(length(ret.out) == 1L) return(ret.out[[1L]]) 
-    return(ret.out)
+    ret <- mirtCAT_post_internal(person=person, design=MCE$design)
+    return(ret)
 }

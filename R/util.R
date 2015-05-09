@@ -1,16 +1,20 @@
 MCE <- new.env()
 MCE$complete <- TRUE
 
-getAcovs <- function(possible_patterns, method){
-    ret <- fscores(MCE$test@mo, return.acov = TRUE, 
+FI <- function(mirt_item, Theta){
+    .Call('ItemInfo', mirt_item, Theta)
+}
+
+getAcovs <- function(possible_patterns, method, test, design){
+    ret <- fscores(test@mo, return.acov = TRUE, 
                    method = method, response.pattern = possible_patterns, mirtCAT=TRUE,
-                   rotate = MCE$test@fscores_args$rotate, theta_lim = MCE$test@fscores_args$theta_lim,
-                   mean = MCE$test@fscores_args$mean, cov = MCE$test@fscores_args$cov, 
-                   MI = MCE$test@fscores_args$MI, quadpts = MCE$test@quadpts)
+                   rotate = test@fscores_args$rotate, theta_lim = test@fscores_args$theta_lim,
+                   mean = test@fscores_args$mean, cov = test@fscores_args$cov, 
+                   MI = test@fscores_args$MI, quadpts = test@quadpts)
     ret <- lapply(ret, function(x, pick){
         x <- try(x[pick, pick, drop=FALSE])
         return(x)
-    }, pick=!MCE$design@met_SEM)
+    }, pick=!design@met_SEM)
     ret    
 } 
 
@@ -20,7 +24,10 @@ weighted_mat <- function(mat, row_loc, which_not_answered, P = rep(1, length(row
     mat2 <- vector('list', length(unique(row_loc)))
     for(i in 1L:length(mat2)){
         pick <- which(row_loc == which_not_answered[i])
-        mat2[[i]] <- do.call(`+`, mat[pick])
+        tmp <- mat[pick]
+        for(j in 2L:length(pick))
+            tmp[[1L]] <- tmp[[1L]] + tmp[[j]]
+        mat2[[i]] <- tmp[[1L]]
     }
     mat2
 }
@@ -35,10 +42,10 @@ integrate.xy <- function(x,fx, a,b, use.spline = TRUE, xtol = 2e-8)
     if(is.list(x)) {
         fx <- x$y; x <- x$x
         if(length(x) == 0)
-            stop("list 'x' has no valid $x component")
+            stop("list 'x' has no valid $x component", call.=FALSE)
     }
     if((n <- length(x)) != length(fx))
-        stop("'fx' must have same length as 'x'")
+        stop("'fx' must have same length as 'x'", call.=FALSE)
     
     if(is.unsorted(x)) { i <- sort.list(x); x <- x[i]; fx <- fx[i] }
     if(any(i <- duplicated(x))) {
@@ -48,24 +55,24 @@ integrate.xy <- function(x,fx, a,b, use.spline = TRUE, xtol = 2e-8)
         fx <- fx[!i]
     }
     if(any(diff(x) == 0))
-        stop("bug in 'duplicated()' killed me: have still multiple x[]!")
+        stop("bug in 'duplicated()' killed me: have still multiple x[]!", call.=FALSE)
     
     if(missing(a)) a <- x[1]
-    else if(any(a < x[1])) stop("'a' must NOT be smaller than min(x)")
+    else if(any(a < x[1])) stop("'a' must NOT be smaller than min(x)", call.=FALSE)
     if(missing(b)) b <- x[n]
-    else if(any(b > x[n])) stop("'b' must NOT be larger  than max(x)")
+    else if(any(b > x[n])) stop("'b' must NOT be larger  than max(x)", call.=FALSE)
     if(length(a) != 1 && length(b) != 1 && length(a) != length(b))
-        stop("'a' and 'b' must have length 1 or same length !")
+        stop("'a' and 'b' must have length 1 or same length !", call.=FALSE)
     else {
         k <- max(length(a),length(b))
-        if(any(b < a))    stop("'b' must be elementwise >= 'a'")
+        if(any(b < a))    stop("'b' must be elementwise >= 'a'", call.=FALSE)
     }
     
     if(use.spline) {
         xy <- spline(x,fx, n = max(1024, 3*n))
         ##-- Work around spline(.) BUG:  (ex.:  range(spline(1:20,1:20,n=95)))
         if(xy$x[length(xy$x)] < x[n]) {
-            if(TRUE) cat("working around spline(.) BUG --- hmm, really?\n\n")
+            if(TRUE) cat("working around spline(.) BUG --- hmm, really?\n\n", call.=FALSE)
             xy$x <- c(xy$x,  x[n])
             xy$y <- c(xy$y, fx[n])
         }
@@ -99,43 +106,21 @@ integrate.xy <- function(x,fx, a,b, use.spline = TRUE, xtol = 2e-8)
     r/2
 }
 
-extract_choices <- function(x){
-    if(is(x, 'shiny.tag.list')){
-        if(!is.null(x[[1L]][[2L]]$children[[1]])){ #selectInput
-            split <- strsplit(x[[1L]][[2L]]$children[[1]], "\"")[[1L]]
-            ret <- split[seq(from = 2L, to = length(split), by = 2L)]
-        } else { #textInput
-            ret <- ''
-        }
-    } else if(is(x, 'shiny.tag')){ #radioInput
-        split <- lapply(x$children[[2L]], function(x) x$children[[1L]]$attribs$value)
-        ret <- do.call(c, split)
-    }
-    return(ret)
-}
-
-slowTheHeckDown <- function(x = .1){
-    p1 <- proc.time()
-    Sys.sleep(x)
-    proc.time() - p1
-}
-
 buildShinyElements <- function(questions, itemnames){
-    if(!is.data.frame(questions))
-        stop('questions input must be a data.frame')
-    if(!all(sapply(questions, class) == 'character')) 
-        stop('Only character classes are supported in questions input')
-    if(is.null(itemnames)) itemnames <- paste0('Item.', 1:nrow(questions))
-    names <- colnames(questions)
+    J <- length(questions$Question)
+    if(!all(sapply(questions[names(questions) != 'Question'], is.character))) 
+        stop('Only character classes are supported in questions input', call.=FALSE)
+    if(is.null(itemnames)) itemnames <- paste0('Item.', 1L:J)
+    names <- names(questions)
     Qs_char <- questions$Question
     Type <- questions$Type
-    if(is.null(Qs_char)) stop('Question column not specified')
-    if(is.null(Type)) stop('Type column not specified')
+    if(is.null(Qs_char)) stop('Question column not specified', call.=FALSE)
+    if(is.null(Type)) stop('Type column not specified', call.=FALSE)
     if(!all(Type %in% c('radio', 'radio_inline', 'select', 'text')))
-        stop('Type input in shiny_questions contains invalid arguments')
-    Qs <- vector('list', nrow(questions))
-    choices <- as.matrix(questions[,grepl('Option', names)])
-    colnames(choices) <- NULL
+        stop('Type input in shiny_questions contains invalid arguments', call.=FALSE)
+    Qs <- vector('list', J)
+    choices <- data.frame(questions[grepl('Option', names)], stringsAsFactors = FALSE)
+    names(choices) <- NULL
     for(i in 1L:length(Qs)){
         if(Type[i] %in% c('radio', 'radio_inline')){
             cs <- na.omit(choices[i, ])
@@ -144,13 +129,13 @@ buildShinyElements <- function(questions, itemnames){
                                     choices = cs, selected = '')
         } else if(Type[i] == 'select'){
             cs <- na.omit(choices[i,])
-            Qs[[i]] <- selectInput(inputId = itemnames[i], label='', selected = '',
-                                    choices = na.omit(as.character(choices[i,])))
+            Qs[[i]] <- selectInput(inputId = itemnames[i], label='', selected = '', 
+                                    choices = cs)
         } else if(Type[i] == 'text'){
             Qs[[i]] <- textInput(inputId = itemnames[i], label='', value = '')
         }
     }
-    pick <- questions[,grepl('Answer', names),drop=FALSE]
+    pick <- as.data.frame(questions[grepl('Answer', names),drop=FALSE], stringsAsFactors = FALSE)
     if(length(pick)){
         item_answers <- split(pick, 1:nrow(pick))
         item_answers <- lapply(item_answers, na.omit)
@@ -179,3 +164,5 @@ formatTime <- function(delta){
     }
     out
 }
+
+last_item <- function(items_answered) items_answered[max(which(!is.na(items_answered)))]
