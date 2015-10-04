@@ -15,7 +15,9 @@ mirtCAT(df = NULL, mo = NULL, method = "MAP", criteria = "seq",
 
 \method{summary}{mirtCAT}(object, sort = TRUE, ...)
 
-\method{plot}{mirtCAT}(x, pick_theta = NULL, SE = 1, main = NULL, ...)
+\method{plot}{mirtCAT}(x, pick_theta = NULL, SE = 1, main = NULL,
+  par.strip.text = list(cex = 0.7), par.settings = list(strip.background =
+  list(col = "#9ECAE1"), strip.border = list(col = "black")), ...)
 }
 \arguments{
 \item{df}{a \code{data.frame} or \code{list} object
@@ -289,11 +291,14 @@ mirtCAT(df = NULL, mo = NULL, method = "MAP", criteria = "seq",
     information. Note that the demographics GUI page will appear again, but this information
     will not be used and can be skipped.}
 
-  \item{\code{lastpage}}{Last message indicating that the test has been completed
-    (i.e., criteria has been met). Default is
+  \item{\code{lastpage}}{A function printing the last message, indicating that the test has been completed
+    (i.e., criteria has been met). The function requires exactly one argument (called \code{person}), where
+    the input argument is the person object that has been updated throught the test. The default function is
 
-    \preformatted{list(h5("You have successfully completed the interface.
-      Click the action button to terminate the application."))}
+    \preformatted{function(person){
+                    return(list(h5("You have successfully completed the interface.
+                                   Click the action button to terminate the application.")))
+                     } }
    }
 
    \item{\code{css}}{a character string defining CSS elements to modify the GUI presentation
@@ -347,6 +352,10 @@ standard error. To obtain the 95\% interval use \code{SE = 1.96} (from the z-dis
 
 \item{main}{title of the plot. Will default to \code{'CAT Standard Errors'} or
 \code{'CAT ##\% Confidence Intervals'} depending on the SE input}
+
+\item{par.strip.text}{plotting argument passed to \code{\link{lattice}}}
+
+\item{par.settings}{plotting argument passed to \code{\link{lattice}}}
 }
 \value{
 Returns a list object of class \code{'Person'} containing the following elements:

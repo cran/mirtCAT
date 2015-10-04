@@ -15,6 +15,15 @@ df <- data.frame(Question = questions, Option = options, Type = "radio")
 results <- mirtCAT(df = df)
 results2 <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
 
+# change final message
+lastpagefun <- function(person){
+    #browser() ## browser can be helpful here to see the contents of 'person'
+    est <- as.vector(person$thetas)
+    return(list(h5("You have successfully completed the interface."), 
+                   h6(sprintf("Your final theta estimate to two decimal places is %.2f.", est))))
+} 
+results2 <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE, lastpage=lastpagefun))
+
 ## two step hosting
 my_fun <- function(person) cat('Hello world\n')
 mirtCAT_preamble(df, final_fun = my_fun)
@@ -113,8 +122,9 @@ authors <- "I. M. D. Author"
 firstpage <- list(h2("Example Test"), h5("Please answer each item to the best of your ability.\n
                                          The results of this test will remain completely anonymous\n
                                          and are only used for research purposes."))
-lastpage <- list(h3("Thank you for completing the test. Please click 'Next' to\n
-                    save your results."))
+lastpage <- function(person) 
+              return(list(h3("Thank you for completing the test. Please click 'Next' to\n
+                    save your results.")))
 demographics <- list(textInput(inputId = "occupation", label = "What is your occupation?",
                                value = ""), selectInput(inputId = "gender", label = "Please select your gender.",
                                                         choices = c("", "Male", "Female", "Other"), selected = ""))
