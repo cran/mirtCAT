@@ -1,6 +1,6 @@
 Package: mirtCAT
-Version: 0.6
-Date: 2015-10-04
+Version: 0.6.1
+Date: 2015-11-19
 Type: Package
 Title: Computerized Adaptive Testing with Multidimensional Item
         Response Theory
@@ -11,7 +11,7 @@ Description: Provides tools to generate an HTML interface for creating adaptive
     package. Suitable for applying unidimensional and multidimensional
     computerized adaptive tests using item response theory methodology and for
     creating simple questionnaires forms to collect response data directly in R.
-Depends: mirt (>= 1.8), shiny (>= 0.11.0), lattice
+Depends: mirt (>= 1.14), shiny (>= 0.11.0), lattice
 Imports: stats, Rcpp, methods, markdown
 Suggests: parallel, knitr, testthat
 ByteCompile: no
@@ -26,6 +26,6 @@ URL: https://github.com/philchalmers/mirtCAT,
         https://github.com/philchalmers/mirtCAT/wiki
 BugReports: https://github.com/philchalmers/mirtCAT/issues?state=open
 NeedsCompilation: yes
-Packaged: 2015-10-04 16:50:31 UTC; phil
+Packaged: 2015-11-19 21:37:58 UTC; phil
 Author: Phil Chalmers [aut, cre, cph]
-Date/Publication: 2015-10-04 23:25:05
+Date/Publication: 2015-11-19 23:47:15
