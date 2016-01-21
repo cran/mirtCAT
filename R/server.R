@@ -34,10 +34,16 @@ server <- function(input, output) {
                 MCE$person$demographics <- MCE$last_demographics
             if(MCE$shinyGUI$temp_file != '')
                 saveRDS(MCE$person, MCE$shinyGUI$temp_file)
-            return(list(h5("Click the action button to begin.")))
+            return(list(h5(MCE$shinyGUI$begin_message)))
         }
         
         if(click == 3L) MCE$start_time <- proc.time()[3L]
+        
+        if(MCE$resume_file){
+            MCE$resume_file <- FALSE
+            item <- max(which(!is.na(MCE$person$items_answered)))
+            return(list(MCE$shinyGUI$df$Question[[item]], MCE$shinyGUI$questions[[item]]))
+        }
         
         itemclick <- sum(!is.na(MCE$person$items_answered))
         
@@ -46,15 +52,18 @@ server <- function(input, output) {
             if(itemclick >= 1L){
                 pick <- MCE$person$items_answered[itemclick]
                 name <- MCE$test@itemnames[pick]
-                ip <- input[[name]]
+                ip <- unname(input[[name]])
                 if(is.null(ip)) ip <- input[[paste0(MCE$invalid_count, '.TeMpInTeRnAl',name)]]
                 if(!is.null(ip)){
-                    MCE$person$raw_responses[pick] <- MCE$person$responses[pick] <- 
-                        which(MCE$test@item_options[[pick]] %in% ip) - 1L
+                    ip <- as.character(ip)
+                    MCE$person$raw_responses[pick] <- ip
+                    if(!is.null(MCE$test@item_options[[pick]])){
+                        MCE$person$responses[pick] <- which(MCE$test@item_options[[pick]] %in% ip) - 1L
+                    }
                     if(!is.na(MCE$test@item_answers[[pick]]) && 
-                           MCE$test@item_class[pick] != 'nestlogit')
+                           MCE$test@item_class[pick] != 'nestlogit'){
                         MCE$person$responses[pick] <- as.integer(ip %in% MCE$test@item_answers[[pick]])
-                    
+                    }
                     MCE$person$item_time[pick] <- proc.time()[3L] - MCE$start_time - 
                         sum(MCE$person$item_time)
                     
@@ -89,6 +98,8 @@ server <- function(input, output) {
                 item <- findNextCATItem(person=MCE$person, test=MCE$test, design=MCE$design,
                                         start=FALSE)
                 MCE$person$items_answered[itemclick+1L] <- item
+                if(MCE$shinyGUI$temp_file != '')
+                    saveRDS(MCE$person, MCE$shinyGUI$temp_file)
                 return(list(MCE$shinyGUI$df$Question[[item]], MCE$shinyGUI$questions[[item]]))
             }
         }
@@ -103,7 +114,9 @@ server <- function(input, output) {
             if(!is.null(MCE$final_fun)){
                 ret <- mirtCAT_post_internal(person=MCE$person, design=MCE$design)
                 MCE$final_fun(person = ret)
-            }   
+            }
+            if(MCE$shinyGUI$temp_file != '')
+                file.remove(MCE$shinyGUI$temp_file)
             stopApp()
             return(NULL)
         }

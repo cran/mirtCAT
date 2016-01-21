@@ -29,10 +29,10 @@
 #'   \describe{
 #'   
 #'     \item{\code{Type}}{Indicates the type of response input 
-#'       to use from the shiny package. The supported types are: 'radio' for radio buttons,
-#'       'radio_inline' for radio buttons that are organized horizontally,
-#'       'select' for a pull-down box for selecting inputs, or 'text' for requiring 
-#'       typed user input.} 
+#'       to use from the shiny package. The supported types are: \code{'radio'} for radio buttons,
+#'       \code{'radio_inline'} for radio buttons that are organized horizontally,
+#'       \code{'select'} for a pull-down box for selecting inputs, \code{'text'} for requiring 
+#'       typed user input, or \code{'slider'} for generating slider inputs (see instructions below).} 
 #'     
 #'     \item{\code{Question}}{If \code{df} is a \code{data.frame}, a 
 #'       character vector containing all the questions or stems to be generated.
@@ -53,6 +53,13 @@
 #'     \item{\code{Stem}}{(Optional) a character vector of absolute or relative paths 
 #'       pointing external markdown (.md) or HTML (.html) files to be used as item stems. 
 #'       \code{NA}s are used if the item has no corresponding file.} 
+#'       
+#'     \item{\code{...}}{ In cases where \code{'slider'} inputs are used instead only 
+#'       the \code{Question} input is required along with (at minimum) a 
+#'       \code{min}, \code{max}, and \code{step} column. In rows where the \code{Type == 'slider'} the 
+#'       column names will correpond to the input arguments to \code{\link{sliderInput}}. 
+#'       Other input column options such as \code{step}, \code{round}, \code{pre}, \code{post}, 
+#'       \code{ticks}, and \code{width} are also supported.} 
 #'       
 #'   }
 #'   
@@ -246,9 +253,12 @@
 #'               The following interface was created using the mirtCAT package. 
 #'               To cite the package use citation(\\'mirtCATd\\') in R.')
 #'          }
-#'       }
-#'       
-#'    If an empty list is passed, this page will be skipped.
+#'          
+#'      If an empty list is passed, this page will be skipped.
+#'    }
+#'    
+#'    \item{\code{begin_message}}{Text to display on the page prior to beginning the CAT. Default 
+#'      is \code{"Click the action button to begin."}}
 #' 
 #'   \item{\code{demographics}}{A person information page used in the GUI for collecting 
 #'     demographic information, generated using tools from the shiny package. For example,
@@ -280,13 +290,8 @@
 #'     unexpected computer restarts.      
 #'     
 #'     If \code{NULL}, no temp file will be created. Upon completion of the test, the 
-#'     temp file will be deleted}
-#'     
-#'   \item{\code{resume_file}}{a character vector indicating where a temporary .rds file 
-#'     containing the response information was saved (see \code{temp_file}). Allows the GUI
-#'     session to be continued using the previously stored demographic and response pattern 
-#'     information. Note that the demographics GUI page will appear again, but this information
-#'     will not be used and can be skipped.}
+#'     temp file will be deleted. If a file already exists, however, then this will be used to 
+#'     resume the GUI at the last location where the session was interupted}
 #'     
 #'   \item{\code{lastpage}}{A function printing the last message, indicating that the test has been completed 
 #'     (i.e., criteria has been met). The function requires exactly one argument (called \code{person}), where 
@@ -330,6 +335,9 @@
 #'       Default is FALSE}
 #' }
 #' 
+#' @param ... additional arguments to be passed to \code{\link{mirt}}, \code{\link{fscores}}, 
+#'   \code{\link{runApp}}, or \code{lattice}
+#' 
 #' @export mirtCAT
 #' 
 #' @author Phil Chalmers \email{rphilip.chalmers@@gmail.com}
@@ -339,10 +347,10 @@
 #' @return Returns a list object of class \code{'Person'} containing the following elements:
 #'   
 #' \describe{
-#'   \item{\code{raw_responses}}{A numeric vector indicating the raws responses to the respective
+#'   \item{\code{raw_responses}}{A character vector indicating the raws responses to the respective
 #'     items, where NA indicates the item was not answered}
 #'     
-#'   \item{\code{scored_responses}}{A numeric vector of scored responses if the \code{item_answers} input
+#'   \item{\code{scored_responses}}{An integer vector of scored responses if the \code{item_answers} input
 #'     was used for each respective item}
 #'   
 #'   \item{\code{items_answered}}{An integer vector indicating the order in which the items were 
@@ -460,7 +468,7 @@
 #' res <- mirtCAT(df, mod, shinyGUI = list(temp_file = wdf))
 #' 
 #' # resume test this way if test was stopped early (and temp files were saved)
-#' res <- mirtCAT(df, mod, shinyGUI = list(resume_file = wdf))
+#' res <- mirtCAT(df, mod, shinyGUI = list(temp_file = wdf))
 #' print(res)
 #' 
 #' }
@@ -469,7 +477,8 @@ mirtCAT <- function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq',
                     design = list(), shinyGUI = list(), preCAT = list(), ...)
 {   
     on.exit({MCE$person <- MCE$test <- MCE$design <- MCE$shinyGUI <- MCE$start_time <- 
-                MCE$STOP <- MCE$outfile <- MCE$outfile2 <- MCE$last_demographics <- NULL})
+             MCE$STOP <- MCE$outfile <- MCE$outfile2 <- MCE$last_demographics <- 
+             MCE$preamble_defined <- NULL})
     mirtCAT_preamble(df=df, mo=mo, method=method, criteria=criteria, 
                      start_item=start_item, local_pattern=local_pattern, 
                      design_elements=design_elements, cl=cl,
@@ -480,13 +489,13 @@ mirtCAT <- function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq',
         return(ret)
     }
     if(is.null(local_pattern)){
-        runApp(createShinyGUI(), launch.browser=TRUE)
+        runApp(createShinyGUI(), launch.browser=TRUE, ...)
         person <- MCE$person
     } else {
         person <- run_local(MCE$local_pattern, nfact=MCE$test@nfact, start_item=start_item,
                             nitems=length(MCE$test@itemnames), cl=cl,
                             thetas.start_in=design$thetas.start, score=MCE$score, 
-                            design=MCE$design, test=MCE$test, ...)
+                            design=MCE$design, test=MCE$test)
     }
     ret <- mirtCAT_post_internal(person=person, design=MCE$design)
     return(ret)

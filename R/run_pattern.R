@@ -1,5 +1,5 @@
 run_local <- function(responses, nfact, start_item, nitems, thetas.start_in, 
-                      score, design, test, verbose = FALSE, cl = NULL, ...){
+                      score, design, test, verbose = FALSE, cl = NULL){
     
     fn <- function(n, responses, nfact, start_item, nitems, thetas.start_in, 
                    score, verbose, design, test){
@@ -15,8 +15,8 @@ run_local <- function(responses, nfact, start_item, nitems, thetas.start_in,
             pick <- person$items_answered[i-1]
             name <- test@itemnames[pick]
             ip <- responses[n, pick]
-            person$raw_responses[pick] <- person$responses[pick] <- 
-                which(test@item_options[[pick]] %in% ip) - 1L
+            person$responses[pick] <- which(test@item_options[[pick]] %in% ip) - 1L
+            person$raw_responses[pick] <- as.character(person$responses[pick] + 1L)
             if(!is.na(test@item_answers[[pick]]) && test@item_class[pick] != 'nestlogit')
                 person$responses[pick] <- as.integer(ip == test@item_answers[[pick]])
             

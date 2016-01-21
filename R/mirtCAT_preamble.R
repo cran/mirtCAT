@@ -2,10 +2,12 @@
 #' 
 #' This is largely an internal function called by \code{\link{mirtCAT}}, however it is made 
 #' public for better use with external web-hosting interfaces (like \url{http://www.shinyapps.io/}).
+#' For more information see \url{http://shiny.rstudio.com/articles/persistent-data-storage.html} for 
+#' further information about saving output remotely when using \code{shiny}.
 #' 
 #' @param final_fun a function called just before the shiny GUI has been terminated, primarily for
-#'   saving results externally with packages such as \code{rDrop} 
-#'   (\url{https://github.com/karthik/rDrop}) when applications are hosted on the web. The function
+#'   saving results externally with packages such as \code{rDrop2}, \code{RAmazonS3}, 
+#'   \code{googlesheets}, \code{RMySQL}, and so on when applications are hosted on the web. The function
 #'   must be of the form \code{final_fun <- function(person){...}}, where \code{person} is the 
 #'   standard output returned from \code{\link{mirtCAT}}
 #' 
@@ -15,7 +17,14 @@
 #' 
 #' @author Phil Chalmers \email{rphilip.chalmers@@gmail.com}
 #' 
-#' @seealso \code{\link{mirtCAT}}, \code{\link{createShinyGUI}} 
+#' @seealso \code{\link{mirtCAT}}, \code{\link{createShinyGUI}}, \code{\link{getPerson}} 
+#' 
+#' @examples
+#' \dontrun{
+#' 
+#' mirtCAT_preamble(df = df)
+#' 
+#' }
 mirtCAT_preamble <- function(..., final_fun = NULL){
     return(mirtCAT_preamble_internal(final_fun = final_fun, ...))
 }
@@ -102,12 +111,16 @@ mirtCAT_preamble_internal <-
             design_object@start_item <- start_item
             design_object@criteria <- tmp
         }
-        if(is.null(local_pattern) && !is.null(shinyGUI$resume_file)){
-            person_object <- readRDS(shinyGUI$resume_file)
-            MCE$last_demographics <- person_object$demographics
-            shinyGUI_object$demographics <- list()
-            shinyGUI_object$firstpage <- list()
-            shinyGUI_object$demographic_inputIDs <- character(0)
+        MCE$resume_file <- FALSE
+        if(is.null(local_pattern) && shinyGUI_object$temp_file != ''){
+            if(file.exists(shinyGUI_object$temp_file)){
+                person_object <- readRDS(shinyGUI_object$temp_file)
+                MCE$last_demographics <- person_object$demographics
+                MCE$resume_file <- TRUE
+                shinyGUI_object$demographics <- list()
+                shinyGUI_object$firstpage <- list()
+                shinyGUI_object$demographic_inputIDs <- character(0)
+            } 
         }
         MCE$test <- test_object
         MCE$design <- design_object
@@ -124,7 +137,10 @@ mirtCAT_preamble_internal <-
             MCE$invalid_count <- 0L
             MCE$shinyGUI <- shinyGUI_object
         }
+        
+        MCE$preamble_defined <- TRUE
     
+        invisible()
     }
 
 
@@ -133,7 +149,7 @@ mirtCAT_post_internal <- function(person, design){
     ret.out <- vector('list', length(person))
     for(i in 1L:length(person)){
         person[[i]]$items_answered <- person[[i]]$items_answered[!is.na(person[[i]]$items_answered)]
-        ret <- list(raw_responses=person[[i]]$raw_responses + 1L, 
+        ret <- list(raw_responses=person[[i]]$raw_responses,
                     scored_responses=if(person[[1L]]$score) as.integer(person[[i]]$responses + 
                                                                            MCE$mirt_mins) 
                     else rep(NA, length(person[[i]]$raw_responses)),
