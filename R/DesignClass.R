@@ -28,7 +28,9 @@ Design <- setClass(Class = "Design",
                              content = 'factor',
                              content_prop = 'numeric',
                              content_prop_empirical = 'numeric',
-                             constraints = 'list'),
+                             constraints = 'list',
+                             excluded = 'integer',
+                             customNextItem = 'function'),
                    validity = function(object) return(TRUE)
 )
 
@@ -78,7 +80,8 @@ setMethod("initialize", signature(.Object = "Design"),
                   dnames <- names(design)
                   gnames <- c('min_SEM', 'thetas.start', 'min_items', 'max_items', 'quadpts', 
                               'theta_range', 'weights', 'KL_delta', 'content', 'content_prop',
-                              'classify', 'classify_CI', 'exposure', 'delta_thetas', 'constraints')
+                              'classify', 'classify_CI', 'exposure', 'delta_thetas', 'constraints',
+                              'customNextItem')
                   if(!all(dnames %in% gnames))
                       stop('The following inputs to design are invalid: ',
                            paste0(dnames[!(dnames %in% gnames)], ' '), call.=FALSE)
@@ -126,10 +129,15 @@ setMethod("initialize", signature(.Object = "Design"),
                       .Object@exposure <- exposure
                       .Object@exposure_type <- exposure_type
                   }
-                  if(!is.null(design$constraints)){
+                  if(!is.null(design$constraints))
                       if(!all(names(design$constraints) %in% 
-                              c("independent", "unordered", "ordered", "not_scored")))
-                         stop('Named element in constraints list not suppored', call.=FALSE)
+                              c("independent", "unordered", "ordered", "not_scored", "excluded")))
+                          stop('Named element in constraints list not suppored', call.=FALSE)
+                  if(!is.null(design$constraints$excluded)){
+                      .Object@excluded <- design$constraints$excluded
+                      design$constraints$excluded <- NULL
+                  }
+                  if(!is.null(design$constraints)){
                       if(any(names(design$constraints) == 'not_scored')){
                           .Object@items_not_scored <- 
                               as.integer(design$constraints$not_scored)
@@ -149,6 +157,11 @@ setMethod("initialize", signature(.Object = "Design"),
                         stop('The first item can not be used in an \'independent\' constraint. 
                               Consider removing the items that will not be used from the test.', 
                              call.=FALSE)
+                  }
+                  if(!is.null(design$customNextItem)){
+                      .Object@customNextItem <- design$customNextItem
+                      .Object@CAT_criteria <- 'custom'
+                      .Object@criteria <- 'custom'
                   }
               }
               if(.Object@use_content && criteria == 'seq')

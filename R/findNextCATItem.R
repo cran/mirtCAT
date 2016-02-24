@@ -1,17 +1,37 @@
 #' Find next CAT item
 #' 
 #' A function that returns the next item in the computerized adaptive test. This should be used
-#' in conjunction with the \code{\link{updateDesign}} function.
+#' in conjunction with the \code{\link{updateDesign}} function. The raw input forms can be used
+#' when a \code{customNextItem} function has been defined in \code{\link{mirtCAT}}.
 #' 
 #' @param x an object of class 'mirtCAT_design' returned from the \code{\link{mirtCAT}} function
 #'   when passing \code{design_elements = TRUE}
 #'   
-#' @param ... additional arguments to pass
+#' @param person internal person object. To be used when \code{customNextItem} function has been 
+#'   defined 
+#' 
+#' @param design internal design object. To be used when \code{customNextItem} function has been 
+#'   defined 
+#' 
+#' @param test internal test object. To be used when \code{customNextItem} function has been 
+#'   defined 
+#' 
+#' @param criteria item selection criteria (see \code{\link{mirtCAT}}'s \code{criteria} input). 
+#'   To be used when \code{customNextItem} function has been defined 
+#'   
+#' @param subset an integer vector indicating which items should be included in the optimal search;
+#'   the default \code{NULL} includes all possible items. To allow only the first 10 items to be 
+#'   selected from this can be modified to \code{subset = 1:10}. This is useful when administering 
+#'   a multi-unidimensional CAT session where unidimensional blocks should be clustered together 
+#'   for smoother presentation. Useful when using the \code{customNextItem} function in 
+#'   \code{\link{mirtCAT}}
 #' 
 #' @seealso \code{\link{mirtCAT}}, \code{\link{updateDesign}}
 #' @export findNextItem
 #' @author Phil Chalmers \email{rphilip.chalmers@@gmail.com}     
-#' @return returns a numeric value indicating the index of the next item to be selected
+#' @return returns an integer value indicating the index of the next item to be selected or a
+#'   value of \code{NA} to indicate that the test should be terminated 
+#'   
 #' @examples
 #' \dontrun{
 #' # test defined in mirtCAT help file, first example
@@ -29,22 +49,35 @@
 #' CATdesign$person$Update.thetas(CATdesign$design, CATdesign$test) 
 #' findNextItem(CATdesign)
 #' }
-findNextItem <- function(x){
-    if(class(x) != 'mirtCAT_design')
-        stop('input is not the correct class', call.=FALSE)
-    return(findNextCATItem(person=x$person, test=x$test, design=x$design))
+findNextItem <- function(x, person = NULL, test = NULL, design = NULL, criteria = NULL,
+                         subset = NULL){
+    if(missing(x)){
+        if(any(is.null(person) || is.null(test) || is.null(design) || is.null(criteria)))
+            stop('findNextItem has improper inputs', call.=FALSE)
+        return(findNextCATItem(person=person, test=test, design=design, criteria=criteria,
+                               subset=subset))
+    } else {
+        if(class(x) != 'mirtCAT_design')
+            stop('input is not the correct class', call.=FALSE)
+        return(findNextCATItem(person=x$person, test=x$test, design=x$design, 
+                               criteria = x$design@criteria, subset=subset))
+    }
 }
 
-findNextCATItem <- function(person, test, design, start = TRUE){
+findNextCATItem <- function(person, test, design, criteria, subset = NULL, start = TRUE){
     
     #heavy lifty CAT stuff just to find new item
-    criteria <- design@criteria
     if(all(is.na(person$responses)) && start)
         return(design@start_item)
     lastitem <- sum(!is.na(person$items_answered))
     not_answered <- is.na(person$responses)
     not_answered[!person$valid_item] <- FALSE
+    not_answered[design@excluded] <- FALSE
     which_not_answered <- which(not_answered)
+    if(is.null(subset)) subset <- 1L:test@length
+    which_not_answered <- which_not_answered[which_not_answered %in% subset]
+    if(criteria == 'seq')
+        which_not_answered <- which_not_answered[which_not_answered > lastitem]
     if(!length(which_not_answered)) stop('Ran out of items to administer.', call.=FALSE)
     K <- test@mo@Data$K
     if(criteria %in% c('MEI', 'MEPV', 'MLWI', 'MPWI', 'IKL', 'IKLP', 'IKLn', 'IKLPn')){
@@ -68,7 +101,7 @@ findNextCATItem <- function(person, test, design, start = TRUE){
     thetas <- person$thetas
     
     if(criteria == 'seq'){
-        return(as.integer(lastitem + 1L))
+        return(min(which_not_answered))
     } else if(criteria == 'random'){
         if(length(which_not_answered) == 1L) item <- which_not_answered
         else item <- sample(which_not_answered, 1L)
@@ -84,73 +117,59 @@ findNextCATItem <- function(person, test, design, start = TRUE){
             #otherwise 0, item does not change
         }
         return(as.integer(item))
-    } else if(criteria == 'KL'){
-        crit <- KL(which_not_answered=which_not_answered, 
-                   person=person, test=test, delta=design@KL_delta, thetas=thetas)
-        index <- which_not_answered
+    } else if(criteria == 'custom'){
+        return(as.integer(design@customNextItem(person=person, design=design, test=test)))
+    }
+    index <- which_not_answered
+    crit <- if(criteria == 'KL'){
+        KL(which_not_answered=which_not_answered, 
+           person=person, test=test, delta=design@KL_delta, thetas=thetas)
     } else if(criteria == 'KLn'){
-            crit <- KL(which_not_answered=which_not_answered, 
-                       person=person, test=test, thetas=thetas,
-                       delta=design@KL_delta*sqrt(sum(!is.na(person$responses))))
-            index <- which_not_answered
+        KL(which_not_answered=which_not_answered, 
+           person=person, test=test, thetas=thetas,
+           delta=design@KL_delta*sqrt(sum(!is.na(person$responses))))
     } else if(criteria == 'IKL'){
-        crit <- IKL(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
-                   person=person, test=test, row_loc=row_loc, delta=design@KL_delta, thetas=thetas)
-        index <- which_not_answered
+        IKL(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
+            person=person, test=test, row_loc=row_loc, delta=design@KL_delta, thetas=thetas)
     } else if(criteria == 'IKLP'){
-            crit <- IKL(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
-                        person=person, test=test, row_loc=row_loc, delta=design@KL_delta,
-                        den=TRUE, thetas=thetas)
-            index <- which_not_answered
+        IKL(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
+            person=person, test=test, row_loc=row_loc, delta=design@KL_delta,
+            den=TRUE, thetas=thetas)
     } else if(criteria == 'IKLn'){
-        crit <- IKL(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
-                   person=person, test=test, row_loc=row_loc, thetas=thetas,
-                   delta=design@KL_delta*sqrt(sum(!is.na(person$responses))))
-        index <- which_not_answered
+        IKL(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
+            person=person, test=test, row_loc=row_loc, thetas=thetas,
+            delta=design@KL_delta*sqrt(sum(!is.na(person$responses))))
     } else if(criteria == 'IKLPn'){
-        crit <- IKL(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
-                    person=person, test=test, row_loc=row_loc, thetas=thetas,
-                    delta=design@KL_delta*sqrt(sum(!is.na(person$responses))))
-        index <- which_not_answered
+        IKL(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
+            person=person, test=test, row_loc=row_loc, thetas=thetas,
+            delta=design@KL_delta*sqrt(sum(!is.na(person$responses))))
     } else if(criteria == 'MI'){
-        crit <- MI(which_not_answered=which_not_answered, person=person, test=test, thetas=thetas)
-        index <- which_not_answered
+        MI(which_not_answered=which_not_answered, person=person, test=test, thetas=thetas)
     } else if(criteria == 'MEI'){
-        crit <- MEI(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
-                    person=person, test=test, row_loc=row_loc, thetas=thetas)
-        index <- which_not_answered
+        MEI(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
+            person=person, test=test, row_loc=row_loc, thetas=thetas)
     } else if(criteria == 'MEPV'){
-        crit <- -MEPV(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
-                    person=person, test=test, design=design, row_loc=row_loc, thetas=thetas)
-        index <- which_not_answered
+        -MEPV(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
+              person=person, test=test, design=design, row_loc=row_loc, thetas=thetas)
     } else if(criteria == 'MLWI'){
-        crit <- MLWI(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
-                     person=person, test=test, row_loc=row_loc, thetas=thetas)
-        index <- which_not_answered
+        MLWI(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
+             person=person, test=test, row_loc=row_loc, thetas=thetas)
     } else if(criteria == 'MPWI'){
-        crit <- MPWI(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
-                     person=person, test=test, row_loc=row_loc, thetas=thetas)
-        index <- which_not_answered
+        MPWI(which_not_answered=which_not_answered, possible_patterns=possible_patterns,
+             person=person, test=test, row_loc=row_loc, thetas=thetas)
     } else if(criteria == 'Drule' || criteria == 'DPrule'){
-        crit <- Drule(which_not_answered=which_not_answered, person=person, test=test, 
-                      thetas=thetas)
-        index <- which_not_answered
+        Drule(which_not_answered=which_not_answered, person=person, test=test, thetas=thetas)
     } else if(criteria == 'Erule' || criteria == 'EPrule'){
-        crit <- Erule(which_not_answered=which_not_answered, person=person, test=test, 
-                      thetas=thetas)
-        index <- which_not_answered
+        Erule(which_not_answered=which_not_answered, person=person, test=test, thetas=thetas)
     } else if(criteria == 'Trule' || criteria == 'TPrule'){
-        crit <- Trule(which_not_answered=which_not_answered, person=person, test=test, 
-                      design=design, thetas=thetas)
-        index <- which_not_answered
+        Trule(which_not_answered=which_not_answered, person=person, test=test, 
+              design=design, thetas=thetas)
     } else if(criteria == 'Arule' || criteria == 'APrule'){
-        crit <- -Arule(which_not_answered=which_not_answered, 
-                      person=person, test=test, design=design, thetas=thetas)
-        index <- which_not_answered
+        -Arule(which_not_answered=which_not_answered, 
+               person=person, test=test, design=design, thetas=thetas)
     } else if(criteria == 'Wrule' || criteria == 'WPrule'){
-        crit <- Wrule(which_not_answered=which_not_answered, person=person, test=test,
-                      design=design, thetas=thetas)
-        index <- which_not_answered
+        Wrule(which_not_answered=which_not_answered, person=person, test=test,
+              design=design, thetas=thetas)
     } else {
         stop('Selection criteria does not exist', call.=FALSE)
     }

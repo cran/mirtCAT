@@ -4,20 +4,40 @@
 \alias{findNextItem}
 \title{Find next CAT item}
 \usage{
-findNextItem(x)
+findNextItem(x, person = NULL, test = NULL, design = NULL,
+  criteria = NULL, subset = NULL)
 }
 \arguments{
 \item{x}{an object of class 'mirtCAT_design' returned from the \code{\link{mirtCAT}} function
 when passing \code{design_elements = TRUE}}
 
-\item{...}{additional arguments to pass}
+\item{person}{internal person object. To be used when \code{customNextItem} function has been 
+defined}
+
+\item{test}{internal test object. To be used when \code{customNextItem} function has been 
+defined}
+
+\item{design}{internal design object. To be used when \code{customNextItem} function has been 
+defined}
+
+\item{criteria}{item selection criteria (see \code{\link{mirtCAT}}'s \code{criteria} input). 
+To be used when \code{customNextItem} function has been defined}
+
+\item{subset}{an integer vector indicating which items should be included in the optimal search;
+the default \code{NULL} includes all possible items. To allow only the first 10 items to be 
+selected from this can be modified to \code{subset = 1:10}. This is useful when administering 
+a multi-unidimensional CAT session where unidimensional blocks should be clustered together 
+for smoother presentation. Useful when using the \code{customNextItem} function in 
+\code{\link{mirtCAT}}}
 }
 \value{
-returns a numeric value indicating the index of the next item to be selected
+returns an integer value indicating the index of the next item to be selected or a
+  value of \code{NA} to indicate that the test should be terminated
 }
 \description{
 A function that returns the next item in the computerized adaptive test. This should be used
-in conjunction with the \code{\link{updateDesign}} function.
+in conjunction with the \code{\link{updateDesign}} function. The raw input forms can be used
+when a \code{customNextItem} function has been defined in \code{\link{mirtCAT}}.
 }
 \examples{
 \dontrun{

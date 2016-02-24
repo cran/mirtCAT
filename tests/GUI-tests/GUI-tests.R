@@ -13,6 +13,9 @@ df <- data.frame(Question = questions, Option = options, Type = "radio")
 
 # forced and unforced
 results <- mirtCAT(df = df)
+
+df$inline <- TRUE
+df$width <- "50%"
 results2 <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
 
 # change final message
@@ -35,6 +38,26 @@ runApp(createShinyGUI(), port = 8000)
 person <- getPerson()
 person$raw_responses
 
+# custom UI
+myUI <- function(){
+    return(fluidPage(
+        
+        mainPanel(
+            htmlOutput("item_stem_html"),
+            uiOutput("Main")    
+        ),
+        
+        sidebarPanel(
+            actionButton("Next", 'Next')
+        )
+        
+    )) #end bootstrapPage
+}
+
+mirtCAT_preamble(df)
+runApp(createShinyGUI(ui=myUI), port = 8000)
+mirtCAT(df=df, shinyGUI=list(ui=myUI))
+
 # slider input
 df$Option.5 <- NULL
 df$min <- c(1,NA,NA)
@@ -56,6 +79,9 @@ df <- data.frame(Question = c("", "", "Just a standard stem."), Option = options
                  Stem = c('Math-stem.html', 'Question.md', ''))
 results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
 
+# checkbox input
+df <- data.frame(Question = questions, Option=options, Type = 'checkbox')
+results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
 
 # shiny input questions
 questions <- list(h4("Building CATs with mirtCAT is difficult."),
@@ -73,6 +99,11 @@ df <- list(Question = questions,
 ## Run the mirtCAT web interface and store results
 results <- mirtCAT(df = df)
 
+# none type
+df <- data.frame(Question = c('Empty Q', questions), 
+                 Options=rbind(NA, options), Type = c('none', rep('radio', 3)))
+results <- mirtCAT(df = df)
+results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
 
 #------------------------------------------------------------
 ### more lower level tests

@@ -32,10 +32,14 @@ type of response format, questions, options, answers, and stems:
 \describe{
 
   \item{\code{Type}}{Indicates the type of response input 
-    to use from the shiny package. The supported types are: \code{'radio'} for radio buttons,
-    \code{'radio_inline'} for radio buttons that are organized horizontally,
-    \code{'select'} for a pull-down box for selecting inputs, \code{'text'} for requiring 
-    typed user input, or \code{'slider'} for generating slider inputs (see instructions below).} 
+    to use from the shiny package. The supported types are: \code{'radio'} for radio buttons 
+    (\code{\link{radioButtons}}), \code{'select'} for a pull-down box for selecting 
+    inputs (\code{\link{selectInput}}), \code{'text'} for requiring 
+    typed user input (\code{\link{textInput}}), \code{'checkbox'} for allowing multiple 
+    responses to be checked off (\code{\link{checkboxGroupInput}}),
+    \code{'slider'} for generating slider inputs (\code{\link{sliderInput}}), or
+    \code{'none'} for presenting only an item stem with no selection options. Note that slider
+    inputs require additional arguments to be passed; see \code{...} instructions below).} 
   
   \item{\code{Question}}{If \code{df} is a \code{data.frame}, a 
     character vector containing all the questions or stems to be generated.
@@ -60,9 +64,10 @@ type of response format, questions, options, answers, and stems:
   \item{\code{...}}{ In cases where \code{'slider'} inputs are used instead only 
     the \code{Question} input is required along with (at minimum) a 
     \code{min}, \code{max}, and \code{step} column. In rows where the \code{Type == 'slider'} the 
-    column names will correpond to the input arguments to \code{\link{sliderInput}}. 
+    column names will correspond to the input arguments to \code{\link{sliderInput}}. 
     Other input column options such as \code{step}, \code{round}, \code{pre}, \code{post}, 
-    \code{ticks}, and \code{width} are also supported.} 
+    \code{ticks}, \code{inline}, \code{placeholder}, \code{width}, and \code{size} 
+    are also supported for the respective inputs.} 
     
 }}
 
@@ -211,21 +216,38 @@ decrease estimation times in simulation work}
     likely to be randomly discarded.}
     
   \item{\code{constraints}}{A named list declaring various item selection contraints for which
-    particular item, where each list element is a vector of item numbers. These include:
+    particular item, where each list element is a vector of item numbers. Unless otherwise stated,
+    multiple elements can be decalared (e.g., \code{list(ordered = c(1:5), ordered = c(7:9))} is
+    perfectly acceptable). These include:
     
     \describe{
          \item{\code{not_scored}}{declaring items that can be selected but will not be used in the 
            scoring of the CAT. This is primarily useful when including experimental items for
-           future CATs.}
+           future CATs. Only one vector of \code{not_scored} elements can be supplied}
+         \item{\code{excluded}}{items which should not actually appear in the session 
+           (useful when re-testing participants who have already seen some of the items). 
+           Only one vector of \code{excluded} elements can be supplied}
          \item{\code{independent}}{declaring which items should never appear in the same CAT session.
            Use this if, for example, item 1 and item 10 have very similar questions 
            types and therefore should not appear within the same session}
-         \item{\code{ordered}}{if one item is selected during the CAT, adminster this 
+         \item{\code{ordered}}{if one item is selected during the CAT, administer this 
            particular group of items in order according to the specified sequence}
          \item{\code{unordered}}{same as ordered, except the items in the group will be selected at 
            random until the group is complete}
     }
+  }
   
+  \item{\code{customNextItem}}{a more advanced function of the form 
+    \code{customNextItem <- function(design, person, test)} to use a customized item selection
+    method. This requires more complex programming and understanding of \code{mirtCAT}s internal elements,
+    and it's recommended to initially use a \code{\link{browser}} to understand the state 
+    of the input arguments. 
+    
+    Use this if you wish to program your item selection techniques explicitly, though this 
+    can be combined the internal \code{\link{findNextItem}} function with analogous inputs. 
+    Function must return a single integer value 
+    indicating the next item to administer or an \code{NA} value to indicate that the test
+    should be terminated.
   }
   
 }}
@@ -294,11 +316,11 @@ decrease estimation times in simulation work}
     
     If \code{NULL}, no temp file will be created. Upon completion of the test, the 
     temp file will be deleted. If a file already exists, however, then this will be used to 
-    resume the GUI at the last location where the session was interupted}
+    resume the GUI at the last location where the session was interrupted}
     
   \item{\code{lastpage}}{A function printing the last message, indicating that the test has been completed 
     (i.e., criteria has been met). The function requires exactly one argument (called \code{person}), where 
-    the input argument is the person object that has been updated throught the test. The default function is 
+    the input argument is the person object that has been updated throughout the test. The default function is 
   
     \preformatted{function(person){ 
                     return(list(h5("You have successfully completed the interface. 
@@ -312,6 +334,9 @@ decrease estimation times in simulation work}
      
    \item{\code{forced_choice}}{logical; require a response to each item? Default is \code{TRUE}.
      This should only be set to \code{FALSE} for surveys (not CATs)}
+     
+   \item{\code{ui}}{a shiny UI function used to define the interface. If \code{NULL}, the 
+     default one will be used. See \code{mirtCAT:::default_UI} for the internal code definition}
   
 }}
 
@@ -416,7 +441,7 @@ a large \code{'min_items'} criteria to the \code{design} list input.
 \section{HTML help files, exercises, and examples}{
 
 
-To access examples, vignettes, and exercise files that have been generated with knitr please
+To access examples, vignettes, and exercise files that have been generated with \code{knitr} please
 visit \url{https://github.com/philchalmers/mirtCAT/wiki}.
 }
 \examples{
