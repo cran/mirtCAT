@@ -13,6 +13,7 @@ df <- data.frame(Question = questions, Option = options, Type = "radio")
 
 # forced and unforced
 results <- mirtCAT(df = df)
+results <- mirtCAT(df = df, shinyGUI = list(stopApp = FALSE))
 
 df$inline <- TRUE
 df$width <- "50%"
@@ -98,6 +99,10 @@ df <- list(Question = questions,
 
 ## Run the mirtCAT web interface and store results
 results <- mirtCAT(df = df)
+
+questions <- c("Building CATs with mirtCAT is difficult.",
+               "mirtCAT requires a substantial amount of coding.",
+               "I would use mirtCAT in my research.")
 
 # none type
 df <- data.frame(Question = c('Empty Q', questions), 
