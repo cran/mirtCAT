@@ -1,3 +1,31 @@
+# mirtCAT 1.1
+
+- added `StemExpression` to `df` input to support arbitrary R expressions for stems to 
+  be rendered with standard R code. Allows for inputs such as audio, video, etc, 
+  as well through the use of a suitable `tags$FUN(...)`
+
+- new `password` input to `shinyGUI` list to allow login and password gates. Useful when hosting 
+  CAT on a server with potentially sensitive items
+
+- default `shiny` stem wrapper function for `df` when it is a `data.frame` is now exposed via the 
+  `stem_default_format` input to `shinyGUI`
+
+- MathJax is now explicitly supported in the item stems and response options. 
+  As before, users can provide a manual list explicilty defining the `shiny` functions; 
+  jowever, if a `data.frame` object is used then the stems/responses
+  will be automatically wrapped within a suitable `shiny::withMathJax()` function to render the output
+
+- mental preparation screen now disabled for non-scored tests when 
+  the `mo` object is ommited (i.e., equivalent to setting 
+  `shinyGUI = list(begin_message = "")`)
+
+- `'select'` Type input to `df` now uses a blank option as the default to avoid 
+  clicking through accidently. Also works better with the `forced_choice` default
+
+# mirtCAT 1.0
+
+- released for JSS publication
+
 # mirtCAT 0.9
 
 - fix MLWI/MPWI selection criteria

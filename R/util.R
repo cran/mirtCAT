@@ -133,7 +133,7 @@ buildShinyElements <- function(questions, itemnames){
                                     inline = inline, width = width,
                                     choices = cs, selected = '')
         } else if(Type[i] == 'select'){
-            cs <- na.omit(choices[i,])
+            cs <- c('', na.omit(choices[i,]))
             choices_list[[i]] <- cs
             width <- questions$width[i]
             size <- questions$size[i]
@@ -208,4 +208,37 @@ possible_pattern_thetas <- function(possible_patterns, test, method = 'EAP'){
                                     mean = test@fscores_args$mean, cov = test@fscores_args$cov, 
                                     QMC = test@fscores_args$QMC, custom_den = test@fscores_args$custom_den))
     tmp
+}
+
+stemContent <- function(pick){
+    if(!is.na(.MCE$shinyGUI$stem_expressions[pick])){
+        return(eval(parse(text=.MCE$shinyGUI$stem_expressions[pick])))
+    } else {
+        file <- .MCE$shinyGUI$stem_locations[pick]
+        empty <- is.na(file)
+        if(!empty){
+            if(grepl('\\.[mM][dD]$', file)){
+                suppressWarnings(markdown::markdownToHTML(file=file, output=.MCE$outfile2, 
+                                                          fragment.only = TRUE))
+                contents <- readLines(.MCE$outfile2, warn = FALSE)
+                return(HTML(contents))
+            } else if(grepl('\\.[hH][tT][mM][lL]$', file)){
+                contents <- readLines(file, warn = FALSE)
+                return(HTML(contents))
+            } else empty <- TRUE
+        }
+    }
+    NULL
+}
+
+verifyPassword <- function(input, password){
+    nr <- nrow(password)
+    verified <- if(nr == 1L){
+        input$PaSsWoRd %in% password
+    } else {
+        tmp <- subset(password, password[,1L] == input$UsErNaMe)
+        .MCE$person$login_name <- input$UsErNaMe
+        input$PaSsWoRd %in% tmp[,-1L]
+    }
+    verified
 }

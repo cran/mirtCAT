@@ -1,6 +1,8 @@
 default_UI <- function(){
     
-    return(fluidPage(
+    fluidPage(
+        
+        shiny::withMathJax(),
         
         tags$head(
             tags$style(HTML(.MCE$shinyGUI$css))
@@ -28,6 +30,6 @@ default_UI <- function(){
             uiOutput("Main")    
         )
         
-    )) #end bootstrapPage
+    ) #end bootstrapPage
     
 }

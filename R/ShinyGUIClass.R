@@ -10,17 +10,19 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                     instructions = 'character',
                                     begin_message = 'character',
                                     stem_locations = 'character',
+                                    stem_expressions = 'character',
                                     demographic_inputIDs = 'character',
                                     temp_file = 'character',
                                     width = 'numeric',
                                     height = 'numeric',
                                     forced_choice = 'logical',
+                                    password='data.frame',
                                     css = 'character',
                                     stopApp = 'logical',
                                     ui = 'function'),
                       
                       methods = list(
-                          initialize = function(questions, df, shinyGUI){
+                          initialize = function(questions, df, shinyGUI, adaptive){
                               'Initialize the shiny GUI given questions, df, and shinyGUI list'
                               ui <<- default_UI
                               questions <<- questions
@@ -46,13 +48,22 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                         return(ret)
                                   }))
                               }
+                              if(is.null(shinyGUI$stem_expressions)){
+                                  stem_expressions <<- as.character(rep(NA, length(questions)))
+                              } else {
+                                  stem_expressions <<- as.character(ifelse(shinyGUI$stem_expressions == "",
+                                                                         NA, shinyGUI$stem_expressions))
+                              }
+                              
                               title <<- 'mirtCAT'
                               author <<- 'Author information'
                               instructions <<- c("Instructions:",
                                                  "To progress through the interface, click on the action button below.",
                                                  "Next")
                               demographic_inputIDs <<- character(0)
-                              begin_message <<- "Click the action button to begin."
+                              if(adaptive){
+                                begin_message <<- "Click the action button to begin."
+                              } else begin_message <<- ""
                               firstpage <<- list(h1('Welcome to the mirtCAT interface'),
                                                  'The following interface was created using the mirtCAT package. 
                                                  To cite the package use citation(\'mirtCAT\') in R.')
@@ -66,13 +77,15 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                                    Please close the tab/web browser to terminate the application.")))
                               temp_file <<- ''
                               css <<- ''
+                              password <<- data.frame()
                                                  
                               if(length(shinyGUI)){
                                   dnames <- names(shinyGUI)
                                   gnames <- c('title', 'authors', 'instructions', 'firstpage', 'demographics',
                                               'demographics_inputIDs', 'max_time', 'temp_file', 
                                               'lastpage', 'css', 'stem_dims', 'forced_choice', 'stem_locations',
-                                              'begin_message', 'stopApp', 'ui')
+                                              'begin_message', 'stopApp', 'ui', 'password', 'stem_default_format',
+                                              'stem_expressions')
                                   if(!all(dnames %in% gnames))
                                       stop('The following inputs to shinyGUI are invalid: ',
                                            paste0(dnames[!(dnames %in% gnames)], ' '), call.=FALSE)
@@ -102,6 +115,8 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                       temp_file <<- shinyGUI$temp_file
                                   if(!is.null(shinyGUI$css))
                                       css <<- shinyGUI$css
+                                  if(!is.null(shinyGUI$password))
+                                      password <<- shinyGUI$password
                               }
                           })
                       

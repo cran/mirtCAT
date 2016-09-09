@@ -11,13 +11,40 @@ questions <- c("Building CATs with mirtCAT is difficult.",
                "I would use mirtCAT in my research.")
 df <- data.frame(Question = questions, Option = options, Type = "radio")
 
-# forced and unforced
+# forced
 results <- mirtCAT(df = df)
+summary(results)
 results <- mirtCAT(df = df, shinyGUI = list(stopApp = FALSE))
 
+# password
+results <- mirtCAT(df = df, shinyGUI = list(password = data.frame('1234')))
+summary(results)
+results <- mirtCAT(df = df, shinyGUI = 
+                list(password = data.frame(c('user1', 'user2'), c('1234', '1234'))))
+summary(results)
+
+# css mod ('Readable' file downloaded from http://bootswatch.com/)
+css <- readLines('bootstrap.css')
+results <- mirtCAT(df = df, shinyGUI = list(css = css))
+
+# select input
+df2 <- df
+df2$Type[1] <- 'select'
+results <- mirtCAT(df = df2)
+
+# width/inline change
 df$inline <- TRUE
 df$width <- "50%"
 results2 <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
+summary(results2)
+
+# mathJax test
+df3 <- df
+df3$Question[1] <- 'Something something \\(\\sqrt{2}\\)? Why yes, $$e = mc^2$$'
+df3$Option.1[1] <- '\\(\\alpha\\)'
+df3$Option.1[2] <- '\\(\\beta\\)'
+results <- mirtCAT(df = df3, shinyGUI = list(forced_choice = FALSE))
+summary(results)
 
 # change final message
 lastpagefun <- function(person){
@@ -30,21 +57,23 @@ results2 <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE, lastpage=las
 
 # save and resume temp file
 mirtCAT(df = df, shinyGUI = list(temp_file = 'thisfile.rds')) #stop early
-mirtCAT(df = df, shinyGUI = list(temp_file = 'thisfile.rds')) #this resumes and deletes
+results <- mirtCAT(df = df, shinyGUI = list(temp_file = 'thisfile.rds')) #this resumes and deletes
+summary(results)
 
 ## two step hosting
 my_fun <- function(person) cat('Hello world\n')
 mirtCAT_preamble(df, final_fun = my_fun)
 runApp(createShinyGUI(), port = 8000)
 person <- getPerson()
-person$raw_responses
+summary(person)
 
 # custom UI
 myUI <- function(){
-    return(fluidPage(
+    fluidPage(
+        
+        shiny::withMathJax(), 
         
         mainPanel(
-            htmlOutput("item_stem_html"),
             uiOutput("Main")    
         ),
         
@@ -52,12 +81,13 @@ myUI <- function(){
             actionButton("Next", 'Next')
         )
         
-    )) #end bootstrapPage
+    ) #end bootstrapPage
 }
 
 mirtCAT_preamble(df)
 runApp(createShinyGUI(ui=myUI), port = 8000)
-mirtCAT(df=df, shinyGUI=list(ui=myUI))
+person2 <- mirtCAT(df=df, shinyGUI=list(ui=myUI))
+summary(person2)
 
 # slider input
 df$Option.5 <- NULL
@@ -67,22 +97,49 @@ df$value <- c(3,NA,NA)
 df$step <- c(1, NA, NA)
 df$Type[1] <- 'slider'
 results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
+summary(results)
 
 df <- data.frame(Question = questions, min=rep(1,3), max=rep(5,3), step=rep(1,3), Type = 'slider')
 results2 <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
+summary(results2)
 
 # text input
 df <- data.frame(Question = questions, Type = 'text')
 results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
+summary(results)
 
 # HTML/markdown stems
 df <- data.frame(Question = c("", "", "Just a standard stem."), Option = options, Type = "radio",
                  Stem = c('Math-stem.html', 'Question.md', ''))
 results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
 
+# expressions
+df <- data.frame(Question = c("", "", "Just a standard stem."), Option = options, Type = "radio",
+                 Stem = c('Math-stem.html', '', ''),
+                 StemExpression = c('', 'tags$h1("My header")', 'tags$b("This text is bold.")'))
+results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
+
+# audio/video
+dirname <- paste0(getwd(), '/www')
+shiny::addResourcePath('www', dirname)
+df <- data.frame(Question = c("", "", "Just a standard stem."), Option = options, Type = "radio",
+                 Stem = c('Math-stem.html', '', ''),
+                 StemExpression = c('', 
+                                    'tags$audio(src = "www/clip.mp3", type = "audio/mp3",
+                                    autoplay = TRUE, controls = TRUE)', 
+                                    'tags$video(src = "www/vid.mp4", type = "video/mp4",
+                                    controls = TRUE, height=260, width=260)'))
+results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
+
+# save and resume temp file with HTMLs
+mirtCAT(df = df, shinyGUI = list(temp_file = 'thisfile.rds')) #stop early
+results <- mirtCAT(df = df, shinyGUI = list(temp_file = 'thisfile.rds')) #this resumes and deletes
+summary(results)
+
 # checkbox input
 df <- data.frame(Question = questions, Option=options, Type = 'checkbox')
 results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
+summary(results)
 
 # shiny input questions
 questions <- list(h4("Building CATs with mirtCAT is difficult."),
@@ -108,7 +165,9 @@ questions <- c("Building CATs with mirtCAT is difficult.",
 df <- data.frame(Question = c('Empty Q', questions), 
                  Options=rbind(NA, options), Type = c('none', rep('radio', 3)))
 results <- mirtCAT(df = df)
+summary(results)
 results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
+summary(results)
 
 #------------------------------------------------------------
 ### more lower level tests
@@ -192,4 +251,5 @@ shinyGUI_list <- list(title = title, authors = authors, demographics = demograph
 # run the customized GUI interface
 results <- mirtCAT(df = df, mo = mod, criteria = "Drule", start_item = "DPrule",
                    shinyGUI = shinyGUI_list, design = design_list, preCAT = preCAT_list)
+summary(results)
 

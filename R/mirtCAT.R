@@ -58,6 +58,14 @@
 #'       pointing external markdown (.md) or HTML (.html) files to be used as item stems. 
 #'       \code{NA}s are used if the item has no corresponding file.} 
 #'       
+#'     \item{\code{StemExpression}}{(Optional) a character vector of arbitrary R expressions
+#'       to be evaluated as suitable item stems. These are rendered into suitable HTML code,
+#'       typically through shiny. E.g., the following would result in two 
+#'       bolded and italicized item stems: 
+#'       \code{StemExpression = c("tags$b('Stem 1')", "tags$em('Stem 2')")}. See 
+#'       \code{http://shiny.rstudio.com/articles/tag-glossary.html} for more examples of how
+#'       to use tags.}
+#'       
 #'     \item{\code{...}}{ In cases where \code{'slider'} inputs are used instead only 
 #'       the \code{Question} input is required along with (at minimum) a 
 #'       \code{min}, \code{max}, and \code{step} column. In rows where the \code{Type == 'slider'} the 
@@ -279,8 +287,9 @@
 #'      If an empty list is passed, this page will be skipped.
 #'    }
 #'    
-#'    \item{\code{begin_message}}{Text to display on the page prior to beginning the CAT. Default 
-#'      is \code{"Click the action button to begin."}}
+#'    \item{\code{begin_message}}{Text to display on the page prior to beginning the CAT. Default is 
+#'      \code{"Click the action button to begin."} for scored tests whereby a \code{mo} object has been include,
+#'      while the default is \code{""} for non-scored tests (which disables the page).}
 #' 
 #'   \item{\code{demographics}}{A person information page used in the GUI for collecting 
 #'     demographic information, generated using tools from the shiny package. For example,
@@ -300,6 +309,10 @@
 #'   \item{\code{demographics_inputIDs}}{a character vector required if a custom demographics
 #'     input is used. Default is \code{demographics_inputIDs = 'gender'}, corresponding to
 #'     the \code{demographics} default}
+#'     
+#'   \item{\code{stem_default_format}}{\code{shiny} function used for the stems of the items. Default uses the 
+#'     \code{\link{p}} wrapper. To change this to \code{\link{h5}}, for example, 
+#'     pass \code{stem_default_format = shiny::h5} to the \code{shinyGUI} list}
 #'     
 #'   \item{\code{max_time}}{maximum time allowed for the generated GUI, measured
 #'     in seconds. For instance, if the test should stop after 10 minutes then the number 
@@ -331,6 +344,21 @@
 #'      
 #'    \item{\code{forced_choice}}{logical; require a response to each item? Default is \code{TRUE}.
 #'      This should only be set to \code{FALSE} for surveys (not CATs)}
+#'      
+#'      
+#'    \item{\code{password}}{a \code{data.frame} object indicating the user name (optional) and password
+#'      required prior to beginning the CAT. Possible options are
+#'      \describe{
+#'        \item{No User Information}{a single row \code{data.frame}. Each column supplied in this case will be associated
+#'          with a suitable password for all individuals. Naturally, if only 1 column is defined then
+#'          there is only 1 global password for all users}
+#'        \item{User Information Pairing}{a multirow \code{data.frame} where the first column 
+#'          represents the user name and all other columns as the same as the first option. 
+#'          E.g., if two users ('name1' and 'name2') 
+#'          are given the same password '1234' then 
+#'          \code{password = data.frame(user = c('user1', 'user2'), password = rep('1234', 2))}}      
+#'      }
+#'    }
 #'      
 #'    \item{\code{stopApp}}{logical; use a \code{stopApp()} call after the interface has been completed?
 #'      Default is \code{TRUE}. However, when hosting an application on a remote server this should be set

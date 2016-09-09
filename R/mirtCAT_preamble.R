@@ -41,7 +41,10 @@ mirtCAT_preamble_internal <-
              start_item = 1, local_pattern = NULL, design_elements=FALSE, cl=NULL,
              design = list(), shinyGUI = list(), preCAT = list(), final_fun = NULL, ...)
     {
+        is_adaptive <- !is.null(mo)
         Names <- if(!is.null(mo)) colnames(mo@Data$data) else NULL
+        if(is.null(shinyGUI$stem_default_format)) 
+            shinyGUI$stem_default_format <- shiny::p
         if(is.null(df)){
             if(is.null(mo)) stop('No df or mo supplied', call.=FALSE)
             if(is.null(local_pattern)) stop('is.null df input, and no local_pattern supplied', 
@@ -68,13 +71,15 @@ mirtCAT_preamble_internal <-
                 stop('df input must be a data.frame or list', call.=FALSE)
             if(is.data.frame(df)){
                 df <- lapply(df, as.character)
-                df$Question <- lapply(df$Question, shiny::p)
+                df$Question <- lapply(df$Question, function(x, fun) shiny::withMathJax(fun(x)),
+                                      fun=shinyGUI$stem_default_format)
             }
             obj <- buildShinyElements(df, itemnames = Names)
             questions <- obj$questions
             item_answers <- obj$item_answers
             item_options <- obj$item_options
             shinyGUI$stem_locations <- df$Stem
+            shinyGUI$stem_expressions <- df$StemExpression
         }
         if(is.null(mo)){
             dat <- matrix(c(0,1), 2L, length(questions))
@@ -98,7 +103,8 @@ mirtCAT_preamble_internal <-
         #setup objects
         if(!is.null(df)) shinyGUI$stem_locations <- df$Stem
         if(is.null(local_pattern)) 
-            shinyGUI_object <- ShinyGUI$new(questions=questions, df=df, shinyGUI=shinyGUI)
+            shinyGUI_object <- ShinyGUI$new(questions=questions, df=df, shinyGUI=shinyGUI,
+                                            adaptive=is_adaptive)
         test_object <- new('Test', mo=mo, item_answers_in=item_answers, 
                            item_options=item_options, quadpts_in=design$quadpts,
                            theta_range_in=design$theta_range, dots=list(...))
@@ -120,6 +126,7 @@ mirtCAT_preamble_internal <-
             design_object@criteria <- tmp
         }
         .MCE$resume_file <- FALSE
+        .MCE$verified <- TRUE
         if(is.null(local_pattern) && shinyGUI_object$temp_file != ''){
             if(file.exists(shinyGUI_object$temp_file)){
                 person_object <- readRDS(shinyGUI_object$temp_file)
@@ -157,7 +164,8 @@ mirtCAT_post_internal <- function(person, design){
     ret.out <- vector('list', length(person))
     for(i in 1L:length(person)){
         person[[i]]$items_answered <- person[[i]]$items_answered[!is.na(person[[i]]$items_answered)]
-        ret <- list(raw_responses=person[[i]]$raw_responses,
+        ret <- list(login_name=person[[i]]$login_name,
+                    raw_responses=person[[i]]$raw_responses,
                     scored_responses=if(person[[1L]]$score) as.integer(person[[i]]$responses + 
                                                                            .MCE$mirt_mins) 
                     else rep(NA, length(person[[i]]$raw_responses)),
