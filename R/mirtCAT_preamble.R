@@ -7,7 +7,8 @@
 #' 
 #' @param final_fun a function called just before the shiny GUI has been terminated, primarily for
 #'   saving results externally with packages such as \code{rDrop2}, \code{RAmazonS3}, 
-#'   \code{googlesheets}, \code{RMySQL}, and so on when applications are hosted on the web. The function
+#'   \code{googlesheets}, \code{RMySQL}, personal servers, and 
+#'   so on when applications are hosted on the web. The function
 #'   must be of the form \code{final_fun <- function(person){...}}, where \code{person} is the 
 #'   standard output returned from \code{\link{mirtCAT}}
 #' 
@@ -37,7 +38,7 @@ mirtCAT_preamble <- function(..., final_fun = NULL){
 
 # set this up to avoid double documentation
 mirtCAT_preamble_internal <- 
-    function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq', 
+    function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq',
              start_item = 1, local_pattern = NULL, design_elements=FALSE, cl=NULL,
              design = list(), shinyGUI = list(), preCAT = list(), final_fun = NULL, ...)
     {
@@ -83,7 +84,8 @@ mirtCAT_preamble_internal <-
         }
         if(is.null(mo)){
             dat <- matrix(c(0,1), 2L, length(questions))
-            colnames(dat) <- names(questions)
+            colnames(dat) <- if(!is.null(names(questions))) 
+                names(questions) else paste0('Item_', 1L:ncol(dat))
             mo <- mirt(dat, 1L, TOL=NaN)
             score <- FALSE
             if(!(criteria %in% c('seq', 'random')))
@@ -120,8 +122,7 @@ mirtCAT_preamble_internal <-
             tmp <- design_object@criteria
             design_object@criteria <- start_item
             start_item <- findNextCATItem(person=person_object, test=test_object, 
-                                          design=design_object, criteria=design_object@criteria,
-                                          start=FALSE)
+                                          design=design_object, start=FALSE)
             design_object@start_item <- start_item
             design_object@criteria <- tmp
         }
@@ -177,6 +178,8 @@ mirtCAT_post_internal <- function(person, design){
                     thetas_SE_history=person[[i]]$thetas_SE_history,
                     item_time=person[[i]]$item_time,
                     demographics=person[[i]]$demographics)
+        if(length(person[[i]]$true_thetas))
+            ret$true_thetas <- person[[i]]$true_thetas
         if(!is.nan(design@classify[1L])){
             z <- -abs(ret$thetas - design@classify) / ret$SE_thetas
             sig <- z < qnorm(design@classify_alpha)

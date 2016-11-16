@@ -1,12 +1,13 @@
 run_local <- function(responses, nfact, start_item, nitems, thetas.start_in, 
-                      score, design, test, verbose = FALSE, cl = NULL){
+                      score, design, test, progress, verbose = FALSE, cl = NULL, 
+                      primeCluster = TRUE){
     
     fn <- function(n, responses, nfact, start_item, nitems, thetas.start_in, 
                    score, verbose, design, test){
         if(is.na(start_item)) design@start_item <- sample(1L:ncol(responses), 1L)
         person <- Person$new(nfact=nfact, nitems=nitems, theta_SEs=sqrt(diag(test@gp$gcov)),
-                             thetas.start_in=thetas.start_in, score=score)
-        item <- findNextCATItem(person=person, test=test, design=design, criteria=design@criteria)
+                             thetas.start_in=thetas.start_in, score=score, ID=n)
+        item <- findNextCATItem(person=person, test=test, design=design)
         if(is.na(item)){
             design@stop_now <- TRUE
             return(person)
@@ -31,25 +32,45 @@ run_local <- function(responses, nfact, start_item, nitems, thetas.start_in,
             
             design <- Next.stage(design, person=person, test=test, item=i)
             
-            item <- findNextCATItem(person=person, test=test, design=design, 
-                                    criteria=design@criteria)
+            item <- findNextCATItem(person=person, test=test, design=design)
             if(is.na(item)){
                 design@stop_now <- TRUE
                 break
-            } 
-            person$items_answered[i] <- item
+            }
+            if(!is.null(attr(item, 'design'))) design <- attr(item, 'design')
+            person$items_answered[i] <- as.integer(item)
         }
         return(person)
     }
+    if(length(design@person_properties)){
+        if(nrow(design@person_properties) != nrow(responses))
+            stop('person_properties does not have the same number of rows as the local_pattern input',
+                 call.=FALSE)
+    }
     if(is.null(cl) || nrow(responses) == 1L){
-        ret <- lapply(1L:nrow(responses), fn, responses=responses, nfact=nfact, start_item=start_item,
-                      nitems=nitems, thetas.start_in=thetas.start_in, score=score, verbose=verbose, 
-                      design=design, test=test)
+        ret <- if(progress){
+            pbapply::pblapply(1L:nrow(responses), fn, responses=responses, nfact=nfact, start_item=start_item,
+                              nitems=nitems, thetas.start_in=thetas.start_in, score=score, verbose=verbose, 
+                              design=design, test=test)
+        } else {
+            lapply(1L:nrow(responses), fn, responses=responses, nfact=nfact, start_item=start_item,
+                   nitems=nitems, thetas.start_in=thetas.start_in, score=score, verbose=verbose, 
+                   design=design, test=test)
+        }    
     } else {
-        ret <- parallel::parLapply(cl=cl, X=1L:nrow(responses), fun=fn, responses=responses, 
-                                   nfact=nfact, start_item=start_item, design=design, test=test,
-                                   nitems=nitems, thetas.start_in=thetas.start_in, score=score,
-                                   verbose=verbose)
+        parallel::clusterEvalQ(cl, library("mirtCAT"))
+        if(primeCluster) parallel::parLapply(cl=cl, X=1L:(length(cl)*2), function(x) invisible())
+        ret <- if(progress){
+            pbapply::pblapply(cl=cl, X=1L:nrow(responses), FUN=fn, responses=responses,
+                              nfact=nfact, start_item=start_item, design=design, test=test,
+                              nitems=nitems, thetas.start_in=thetas.start_in, score=score,
+                              verbose=verbose)
+        } else {
+            parallel::parLapply(cl=cl, X=1L:nrow(responses), fun=fn, responses=responses,
+                                nfact=nfact, start_item=start_item, design=design, test=test,
+                                nitems=nitems, thetas.start_in=thetas.start_in, score=score,
+                                verbose=verbose)
+        }
     }
     if(verbose) cat('\n')
     ret

@@ -9,15 +9,17 @@
 \usage{
 mirtCAT(df = NULL, mo = NULL, method = "MAP", criteria = "seq",
   start_item = 1, local_pattern = NULL, design_elements = FALSE,
-  cl = NULL, design = list(), shinyGUI = list(), preCAT = list(), ...)
+  cl = NULL, progress = FALSE, primeCluster = TRUE, design = list(),
+  shinyGUI = list(), preCAT = list(), ...)
 
 \method{print}{mirtCAT}(x, ...)
 
 \method{summary}{mirtCAT}(object, sort = TRUE, ...)
 
-\method{plot}{mirtCAT}(x, pick_theta = NULL, SE = 1, main = NULL,
-  par.strip.text = list(cex = 0.7), par.settings = list(strip.background =
-  list(col = "#9ECAE1"), strip.border = list(col = "black")), ...)
+\method{plot}{mirtCAT}(x, pick_theta = NULL, true_thetas = TRUE, SE = 1,
+  main = NULL, par.strip.text = list(cex = 0.7),
+  par.settings = list(strip.background = list(col = "#9ECAE1"), strip.border =
+  list(col = "black")), ...)
 }
 \arguments{
 \item{df}{a \code{data.frame} or \code{list} object 
@@ -137,7 +139,9 @@ This option requires complete response pattern(s) to be supplied. \code{local_pa
 is required to be numeric if no \code{questions} are supplied, and the responses must be 
 within a valid range of the defined \code{mo} object.
 Otherwise, it must contain character values of plausible responses which corresponds to the
-answer key and/or options supplied in \code{df}}
+answer key and/or options supplied in \code{df}. If the object contains an attribute \code{'Theta'} 
+then these values will be stored within the respective returned objects. 
+See \code{\link{generate_pattern}} to generate response patterns for Monte Carlo simulations}
 
 \item{design_elements}{logical; return an object containing the test, person, and design 
 elements? Primarily this is to be used with the \code{\link{findNextItem}} function}
@@ -146,6 +150,14 @@ elements? Primarily this is to be used with the \code{\link{findNextItem}} funct
 (see \code{?parallel::parLapply} for details). If defined, and if 
 \code{nrow(local_pattern) > 1}, then each row will be run in parallel to help 
 decrease estimation times in simulation work}
+
+\item{progress}{logical; print a progress bar to the console 
+with the \code{pbapply} package for given response patterns? Useful for 
+guaging how long Monte Carlo simulations will take to finish}
+
+\item{primeCluster}{logical; when a \code{cl} object is supplied, should the cluster be primed 
+first before running the simulations in parallel? Setting to \code{TRUE} will ensure that 
+using the cluster will be optimal every time a new \code{cl} is defined. Default is \code{TRUE}}
 
 \item{design}{a list of design based control parameters for adaptive and non-adaptive tests. 
   These can be
@@ -212,7 +224,7 @@ decrease estimation times in simulation work}
     The default uses no exposure control. If the item exposure 
     is greater than 1 then the \code{n} most optimal
     criteria will be randomly sampled from. For instance, if 
-    \code{exposure[5] == 3}, and \code{critiera = 'MI'}, then when the fifth item is to be 
+    \code{exposure[5] == 3}, and \code{criteria = 'MI'}, then when the fifth item is to be 
     selected from the remaining pool of items the top 3 candidate items demonstrating 
     the largest information criteria will be sampled from. Naturally, the first and last 
     elements of \code{exposure} are ignored since exposure control will be meaningless.
@@ -223,9 +235,9 @@ decrease estimation times in simulation work}
     Values closer to 1 are more likely to appear in the test, while value closer to 0 are more
     likely to be randomly discarded.}
     
-  \item{\code{constraints}}{A named list declaring various item selection contraints for which
+  \item{\code{constraints}}{A named list declaring various item selection constraints for which
     particular item, where each list element is a vector of item numbers. Unless otherwise stated,
-    multiple elements can be decalared (e.g., \code{list(ordered = c(1:5), ordered = c(7:9))} is
+    multiple elements can be declared (e.g., \code{list(ordered = c(1:5), ordered = c(7:9))} is
     perfectly acceptable). These include:
     
     \describe{
@@ -249,13 +261,62 @@ decrease estimation times in simulation work}
     \code{customNextItem <- function(design, person, test)} to use a customized item selection
     method. This requires more complex programming and understanding of \code{mirtCAT}s internal elements,
     and it's recommended to initially use a \code{\link{browser}} to understand the state 
-    of the input arguments. 
+    of the input arguments. When defined, all but the \code{not_scored} input 
+    to the optional \code{constraints} list will be ignored.
     
     Use this if you wish to program your item selection techniques explicitly, though this 
     can be combined the internal \code{\link{findNextItem}} function with analogous inputs. 
     Function must return a single integer value 
     indicating the next item to administer or an \code{NA} value to indicate that the test
-    should be terminated.
+    should be terminated. See \code{\link{extract.mirtCAT}} for details on how to extract and manipulate
+    various internal elements from the required functional arguments
+  }
+  
+  \item{\code{constr_fun}}{a user-defined function of the form \code{function(person, test, design)} 
+    that returns a \code{data.frame} containing the left hand side, relationship, and right hand side
+    of the constraints for \code{\link{lp}}. 
+    Each row corresponds to a constraint, while the number of columns should be 
+    equal to the number of items plus 2. Note that the column names of the 
+    returned \code{data.frame} object do not matter. 
+  
+    For example, say that for a given test the user wants to add 
+    the constraint that exactly 10 items 
+    should be administered to all participants, and that items 1 and 2 should not 
+    be included in the same test. The input would then be defined as 
+    \preformatted{const_fun <- function(person, test, design){
+       nitems <- extract.mirt(test@mo, 'nitems')
+       lhs <- matrix(0, 2, nitems)
+       lhs[1, ] <- 1
+       lhs[2, c(1,2)] <- 1
+       data.frame(item=lhs, relation=c("==", "<="), value=c(10, 1))
+     }}
+    The definition above corresponds to the constraints \code{1 * x1 + 1 * x2 + ... + 1 * xn = 10} 
+    and \code{1 * x1 + 1 * x2 + 0 * x3 + ... + 0 * xn <= 1} , where 
+    the \code{x} terms represent binary indicators for each respective item which the optimizer 
+    is searching through. Given some objective vector supplied to \code{\link{findNextItem}},
+    the most optimal 10 items will be selected which satisfy these two constraints, meaning that
+    1) exactly 10 items will be administered, and 2) if either item 1 or 2 were
+    selected these two items would never appear in the same test form (though neither is forced to
+    appear in any given test). 
+    See \code{\link{findNextItem}} for further details and examples
+  }
+  
+  \item{\code{test_properties}}{a user-defined \code{data.frame} object to be used
+    with a supplied \code{customNextItem} function. This should be used to define particular
+    properties inherent to the test items (e.g., whether they are experimental, have a particular
+    weighting scheme, should only be used for one particular group of individuals, and so on). 
+    The number of rows must be equal to the number of items in the item bank, and each row 
+    corresponds to the respective item. This input appears within the internal \code{design} object
+    in a \code{test_properties} slot.
+  }
+  
+  \item{\code{person_properties}}{a user-defined \code{data.frame} object to be used
+    with a supplied \code{customNextItem} function. This should be used to define particular
+    properties inherent to the individuals participants (e.g., known grouping variable, age, 
+    whether they've taken the test before (and which items they took), and so on). 
+    In off-line simulations, the number of rows must be equal to the number of participants. 
+    This input appears within the internal \code{design} object in a \code{person_properties} slot; 
+    for Monte Carlo simulations, rows should be manually indexed using the \code{person$ID} slot.
   }
   
 }}
@@ -355,7 +416,7 @@ decrease estimation times in simulation work}
        \item{No User Information}{a single row \code{data.frame}. Each column supplied in this case will be associated
          with a suitable password for all individuals. Naturally, if only 1 column is defined then
          there is only 1 global password for all users}
-       \item{User Information Pairing}{a multirow \code{data.frame} where the first column 
+       \item{User Information Pairing}{a multi-row \code{data.frame} where the first column 
          represents the user name and all other columns as the same as the first option. 
          E.g., if two users ('name1' and 'name2') 
          are given the same password '1234' then 
@@ -410,6 +471,10 @@ for items that were not administered}
 \item{pick_theta}{a number indicating which theta to plot (only applicable for multidimensional 
 tests). The default is to facet each theta on one plot, but to plot only the first factor pass
 \code{pick_theta = 1}}
+
+\item{true_thetas}{logical; include a horizontal line indicating where the population-level 
+theta values are? Only applicable to Monte Carlo simulations because this value would not 
+be known otherwise}
 
 \item{SE}{size of the standard errors to plot. The default is 1, and therefore plots the
 standard error. To obtain the 95\% interval use \code{SE = 1.96} (from the z-distribution)}
@@ -476,6 +541,34 @@ a large \code{'min_items'} criteria to the \code{design} list input.
 
 To access examples, vignettes, and exercise files that have been generated with \code{knitr} please
 visit \url{https://github.com/philchalmers/mirtCAT/wiki}.
+}
+
+\section{Modifying the \code{design} object directly through \code{customNextItem()} (advanced)}{
+
+
+In addition to providing a completely defined item-selection map via the \code{customNextItem()} function, 
+users may also wish to control some of the more fine-grained elements of the \code{design} object to adjust 
+the general control parameters of the CAT (e.g., modifying the maximum number of items to administer, stopping
+the CAT if something peculiar has been detected in the response patterns, etc). Note that 
+this feature is rarely required for most applications, though more advanced users may wish to 
+modify these various low-level elements of the \code{design} object directly to change the flow of the CAT
+to suit their specific needs. 
+
+While the \code{person} object is defined as a \code{Reference Class} (see \code{\link{setRefClass}}) 
+the design object is generally considered a fixed S4 class, meaning that, unlike the \code{person} object, 
+it's elements are not mutable. Therefore, in order to make changes directly to the 
+\code{design} object the users should follow these steps:
+
+\enumerate{
+  \item Within the defined \code{customNextItem} function, the \code{design} object slots are first modified (e.g.,
+    \code{design@max_items <- 20L}).
+  \item Along with the desired next item scalar value from \code{customNextItem()}, the scalar object should also 
+    contain an attribute with the name \code{'design'} which holds the newly defined \code{design} object
+    (e.g., \code{attr(ret, 'design') <- design; return(ret)}).
+ }
+ 
+Following the above process the work-flow in \code{\link{mirtCAT}} will use the new \code{design} object in place of the
+old one, even in Monte Carlo simulations.
 }
 \examples{
 \dontrun{
@@ -578,7 +671,8 @@ Multidimensional Item Response Theory Applications. \emph{Journal of Statistical
 1-39. doi:10.18637/jss.v071.i05
 }
 \seealso{
-\code{\link{generate_pattern}}, \code{\link{generate.mirt_object}}
+\code{\link{generate_pattern}}, \code{\link{generate.mirt_object}}, 
+  \code{\link{extract.mirtCAT}}, \code{\link{findNextItem}}
 }
 \keyword{CAT,}
 \keyword{MCAT,}

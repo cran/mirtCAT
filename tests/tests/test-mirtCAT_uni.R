@@ -48,13 +48,42 @@ test_that('unidimensional', {
     expect_true(all(!is.na(res$raw_responses)))
     
     # custom
-    customNextItem <- function(person, design, test, thetas){
+    customNextItem <- function(person, design, test){
         sum(is.na(person$items_answered)) + 1L
     }
     res <- mirtCAT(df, local_pattern=pat, design = list(customNextItem=customNextItem))
     expect_is(res, 'mirtCAT')
     so <- summary(res)
     expect_equal(c(1, 25:2), so$items_answered)
+    
+    test_properties <- data.frame(item_group = c(1, rep(c(1,2), each=12)))
+    person_properties <- data.frame(group = 1)
+    customNextItem <- function(person, design, test){
+        pp <- with(design, person_properties)
+        tp <- with(design, test_properties)
+        possible_items <- pp$group == tp$item_group & is.na(person$raw_responses)
+        ret <- if(sum(possible_items)) min(which(possible_items)) else NA
+        ret
+    }
+    res <- mirtCAT(df, local_pattern=pat, design = list(customNextItem=customNextItem,
+                                                        test_properties=test_properties,
+                                                        person_properties=person_properties))
+    so <- summary(res)
+    expect_equal(1:13, so$items_answered)
+    person_properties <- data.frame(group = 2)
+    res <- mirtCAT(df, local_pattern=pat, design = list(customNextItem=customNextItem,
+                                                        test_properties=test_properties,
+                                                        person_properties=person_properties))
+    so <- summary(res)
+    expect_equal(c(1, 14:25), so$items_answered)
+    customNextItem <- function(person, design, test){
+        design@max_items <- 5L
+        ret <- sum(is.na(person$items_answered)) + 1L
+        attr(ret, 'design') <- design
+        ret
+    }
+    res <- mirtCAT(df, local_pattern=pat, design = list(customNextItem=customNextItem))
+    expect_equal(length(res$items_answered), 5L)
     
     #sequential
     res <- mirtCAT(df2, mod, local_pattern=pat)
@@ -75,6 +104,11 @@ test_that('unidimensional', {
     expect_equal(as.numeric(res$thetas_SE_history[10L,]), 0.3889968, tolerance = 1e-4)
     expect_true(sum(!is.na(res$raw_responses)) == 9L && sum(!is.na(res$scored_responses)) == 9L)
     expect_true(nrow(!is.na(res$thetas_history)) == 10L && nrow(!is.na(res$thetas_SE_history)) == 10L)
+    
+    res <- mirtCAT(mo = mod, local_pattern=generate_pattern(mod, matrix(c(0,1))), criteria='MI',
+                   design = list(min_SEM = .4))
+    so <- summary(res[[1]])
+    expect_equal(so$true_thetas, 0)
     
     res <- mirtCAT(df2, mod, local_pattern=pat, criteria='MI', start_item = 'MI',
                    design = list(min_SEM = .4))

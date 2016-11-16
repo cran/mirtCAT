@@ -42,6 +42,46 @@ test_that('extra', {
     expect_equal(20, findNextItem(CATdesign))
     CATdesign$person$Update.thetas(CATdesign$design, CATdesign$test)
     expect_equal(3, findNextItem(CATdesign))
+    vals <- computeCriteria(CATdesign, criteria = 'MI')
+    expect_equal(vals[1:4], c(0.15030639, 0.36584452, 0.62360073, 0.08852707), tolerance = 1e-4)
+    
+    # shadow test (less than 20 items, items 31+41 not in same test, item 3 not answered)
+    constr_fun <- function(person, test, design){
+      # left hand side constrains 
+      #    - 1 row per constraint, and ncol must equal number of items
+      nitems <- extract.mirt(test@mo, 'nitems')
+      lhs <- matrix(0, 3, nitems)
+      lhs[1,] <- 1
+      lhs[2,c(31,41)] <- 1
+      lhs[3,3] <- 1
+      
+      # relationship direction
+      dirs <- c("<=", "<=", '==')
+      
+      #right hand side
+      rhs <- c(20, 1, 0)
+    
+      #all together
+      constraints <- data.frame(lhs, dirs, rhs)
+      constraints
+    }
+    CATdesign <- mirtCAT(df, mod2, design_elements = TRUE,
+                         design = list(constr_fun=constr_fun))
+    item <- findNextItem(CATdesign, objective=vals)
+    expect_equal(item, 27)
+    
+    customNextItem <- function(person, design, test){
+        objective <- computeCriteria(person=person, design=design, test=test, 
+                                     criteria = 'MI') 
+        item <- findNextItem(person=person, design=design, test=test, 
+                             objective=objective)
+        item
+    }
+    set.seed(1)
+    res <- mirtCAT(mo = mod2, criteria = 'MI', start_item = 1, 
+                   local_pattern = matrix(sample(c(0,1), 50, TRUE), 1), 
+                   design = list(customNextItem=customNextItem, constr_fun=constr_fun))
+    expect_equal(res$items_answered, c(1,20,41,15,27,2,5,6,21,14,24,29,39,23,22,32,34,8,40,17))
     
     design <- list(min_items = 10, max_items = 45,
                    constraints = list(

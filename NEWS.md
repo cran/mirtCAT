@@ -1,3 +1,30 @@
+# mirtCAT 1.2
+
+- `progress` logical added to `mirtCAT()` to print the progress of Monte Carlo simulations
+  with the `pbapply` package
+
+- Shadow testing and optimal test assembly designs supported by adding `constr_fun` input to 
+  `mirtCAT()` and `objective` input to `findNextItem()`. See the `findNextItem()` documentation
+  for details and examples
+
+- `computeCriteria()` function added to return all the criteria values (e.g.,
+  maximum information) associated with each respective item
+
+- population-level Theta terms tracked internally for Monte Carlo simulations because
+  `generate_pattern()` now stores the respective population values as a silent attribute. 
+  Will now be displayed in summary/print/plot outputs, where applicable
+
+- allow the internal `design` object to be modified through the `customNextItem()` function 
+
+- added an `extract.mirtCAT()` function to better document and extract the components
+  of the `person`, `design`, and `test` objects in `customNextItem()`. Allows for safer 
+  and easier customization of item selection maps
+
+- new `test_properties` and `person_properties` inputs to `design` element to allow for 
+  prior information about the test/persons (e.g., selecting particular items based on 
+  prior demographic information). Intended for use with a `customNextItem()` 
+  function definition
+
 # mirtCAT 1.1
 
 - added `StemExpression` to `df` input to support arbitrary R expressions for stems to 

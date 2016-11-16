@@ -30,7 +30,10 @@ Design <- setClass(Class = "Design",
                              content_prop_empirical = 'numeric',
                              constraints = 'list',
                              excluded = 'integer',
-                             customNextItem = 'function'),
+                             customNextItem = 'function',
+                             test_properties = 'data.frame',
+                             person_properties = 'data.frame',
+                             constr_fun = 'function'),
                    validity = function(object) return(TRUE)
 )
 
@@ -49,7 +52,8 @@ setMethod("initialize", signature(.Object = "Design"),
               .Object@CAT_criteria <- criteria
               .Object@CAT_method <- method
               .Object@start_item <- as.integer(start_item)
-              if(!is.nan(start_item) && .Object@start_item != 1 && criteria == 'seq')
+              if(!is.nan(start_item) && .Object@start_item != 1 && criteria == 'seq' && 
+                 is.null(design$customNextItem))
                   stop('start_item must equal 1 with seq criteria', call.=FALSE)
               if(nfact > 1L && 
                      !any(criteria %in% c('Drule', 'Trule', 'Wrule', 'KL', 'KLn',
@@ -76,12 +80,14 @@ setMethod("initialize", signature(.Object = "Design"),
               .Object@exposure_type <- 'none'
               .Object@constraints <- list()
               .Object@items_not_scored <- integer(0L)
+              .Object@test_properties <- data.frame()
+              .Object@person_properties <- data.frame()
               if(length(design)){
                   dnames <- names(design)
                   gnames <- c('min_SEM', 'thetas.start', 'min_items', 'max_items', 'quadpts', 
                               'theta_range', 'weights', 'KL_delta', 'content', 'content_prop',
                               'classify', 'classify_CI', 'exposure', 'delta_thetas', 'constraints',
-                              'customNextItem')
+                              'customNextItem', 'test_properties', 'person_properties', 'constr_fun')
                   if(!all(dnames %in% gnames))
                       stop('The following inputs to design are invalid: ',
                            paste0(dnames[!(dnames %in% gnames)], ' '), call.=FALSE)
@@ -110,6 +116,16 @@ setMethod("initialize", signature(.Object = "Design"),
                       .Object@max_items <- as.integer(design$max_items)
                   if(!is.null(design$classify))
                       .Object@classify <- design$classify
+                  if(!is.null(design$constr_fun))
+                      .Object@constr_fun <- design$constr_fun
+                  if(!is.null(design$test_properties)){
+                      .Object@test_properties <- design$test_properties
+                      if(nrow(.Object@test_properties) != nitems)
+                          stop('test_properties input does not have the same number of rows as items', 
+                               call.=FALSE)
+                  }
+                  if(!is.null(design$person_properties))
+                      .Object@person_properties <- design$person_properties
                   if(!is.null(design$classify_CI)){
                       if(design$classify_CI > 1 || design$classify_CI < 0)
                           stop('classify_CI criteria must be between 0 and 1', call.=FALSE)
@@ -171,6 +187,9 @@ setMethod("initialize", signature(.Object = "Design"),
               if(length(.Object@min_SEM) != 1L && length(.Object@min_SEM) != nfact)
                   stop('min_SEM criteria is not a suitable length', call.=FALSE)
               if(length(preCAT)){
+                  if(!is.null(design$customNextItem))
+                      stop('preCAT input not supported when customNextItem function supplied',
+                           call.=FALSE)
                   dnames <- names(preCAT)
                   gnames <- c('min_items', 'max_items', 'criteria', 'method', 'response_variance')
                   if(!all(dnames %in% gnames))
