@@ -1,5 +1,5 @@
 Package: mirtCAT
-Version: 1.2
+Version: 1.2.1
 Type: Package
 Title: Computerized Adaptive Testing with Multidimensional Item
         Response Theory
@@ -30,6 +30,6 @@ URL: https://github.com/philchalmers/mirtCAT,
 BugReports: https://github.com/philchalmers/mirtCAT/issues?state=open
 RoxygenNote: 5.0.1
 NeedsCompilation: yes
-Packaged: 2016-11-15 19:45:26 UTC; phil
+Packaged: 2016-11-30 16:06:23 UTC; phil
 Author: Phil Chalmers [aut, cre, cph]
-Date/Publication: 2016-11-16 02:13:41
+Date/Publication: 2016-12-01 08:28:39
