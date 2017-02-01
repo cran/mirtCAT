@@ -16,6 +16,9 @@ results <- mirtCAT(df = df)
 summary(results)
 results <- mirtCAT(df = df, shinyGUI = list(stopApp = FALSE))
 
+#theme
+results <- mirtCAT(df = df, shinyGUI = list(theme = 'journal'))
+
 # password
 results <- mirtCAT(df = df, shinyGUI = list(password = data.frame('1234')))
 summary(results)
@@ -108,53 +111,78 @@ df <- data.frame(Question = questions, Type = 'text')
 results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
 summary(results)
 
+# textArea input
+df <- data.frame(Question = questions, Type = 'textArea')
+df$height = '50%'
+results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
+summary(results)
+
 # HTML/markdown stems
 df <- data.frame(Question = c("", "", "Just a standard stem."), Option = options, Type = "radio",
                  Stem = c('Math-stem.html', 'Question.md', ''))
 results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
 
 # expressions
-df <- data.frame(Question = c("", "", "Just a standard stem."), Option = options, Type = "radio",
+df <- data.frame(Question = c('', 'tags$h1("My header")', 'tags$b("This text is bold.")'), 
+                 Option = options, Type = "radio",
                  Stem = c('Math-stem.html', '', ''),
-                 StemExpression = c('', 'tags$h1("My header")', 'tags$b("This text is bold.")'))
+                 StemExpression = c(FALSE, TRUE, TRUE))
 results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
+
+# divs
+df <- data.frame(Question = c('div(HTML("Here is <strong>one</strong> way to insert <em>arbitrary</em> HTML."))', 
+                              'div(tags$style("#text { font-size: 35px; height: 200px; overflow: auto; }"), 
+                                         div(id = "text", paste(names(tags), collapse = ", ")))', 
+                              'div(tags$style("#text { font-size: 20px; height: 65px; overflow: auto; }"), 
+                                         div(id = "text", paste(names(tags), collapse = ", ")))'), 
+                 Option = options, Type = "radio",
+                 Stem = c('', '', ''),
+                 StemExpression = rep(TRUE, 3))
+results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
+
+# table panels
+df <- data.frame(Question = c('tabsetPanel(tabPanel("Panel 1", "some text"), tabPanel("Panel 2", "some more text"))', 
+                              'tags$h1("My header")', 'tags$b("This text is bold.")'), 
+                 Option = options, Type = "radio",
+                 StemExpression = c(TRUE, TRUE, TRUE))
+results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
+
+# custom choices
+myfun <- function(inputId, df_row){
+    tabsetPanel(tabPanel("Panel 1", "some text"), 
+                tabPanel("Panel 2", "some more text"), 
+                tabPanel("Response", "Final Text", 
+                         radioButtons(inputId = inputId, label='', 
+                                      choices = c('True', 'False'), selected = '')))
+}
+
+options <- matrix(c("Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"),
+                  nrow = 3, ncol = 5, byrow = TRUE)
+questions <- c("",
+               "mirtCAT requires a substantial amount of coding.",
+               "I would use mirtCAT in my research.")
+df <- data.frame(Question = questions, Option = options, Type = "radio")
+df$Type[1] <- 'myQ'
+results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE),
+                   customTypes=list(myQ=myfun))
 
 # audio/video
 dirname <- paste0(getwd(), '/www')
 shiny::addResourcePath('www', dirname)
-df <- data.frame(Question = c("", "", "Just a standard stem."), Option = options, Type = "radio",
-                 Stem = c('Math-stem.html', '', ''),
-                 StemExpression = c('', 
-                                    'tags$audio(src = "www/clip.mp3", type = "audio/mp3",
+df <- data.frame(Question = c('', 
+                              'tags$audio(src = "www/clip.mp3", type = "audio/mp3",
                                     autoplay = TRUE, controls = TRUE)', 
-                                    'tags$video(src = "www/vid.mp4", type = "video/mp4",
-                                    controls = TRUE, height=260, width=260)'))
+                              'tags$video(src = "www/vid.mp4", type = "video/mp4",
+                                    controls = TRUE, height=260, width=260)'), 
+                 Option = options, Type = "radio",
+                 Stem = c('Math-stem.html', '', ''),
+                 StemExpression = c(FALSE, TRUE, TRUE))
 results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
 
 # checkbox input
 df <- data.frame(Question = questions, Option=options, Type = 'checkbox')
 results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE))
 summary(results)
-
-# shiny input questions
-questions <- list(h4("Building CATs with mirtCAT is difficult."),
-                  h4("mirtCAT requires a substantial amount of coding."),
-                  list(h4("I would use mirtCAT in my"), h2("research.")))
-
-df <- list(Question = questions, 
-           Option.1 = options[,1], 
-           Option.2 = options[,2], 
-           Option.3 = options[,3], 
-           Option.4 = options[,4], 
-           Option.5 = options[,5], 
-           Type = rep("radio", 3))
-
-## Run the mirtCAT web interface and store results
-results <- mirtCAT(df = df)
-
-questions <- c("Building CATs with mirtCAT is difficult.",
-               "mirtCAT requires a substantial amount of coding.",
-               "I would use mirtCAT in my research.")
 
 # none type
 df <- data.frame(Question = c('Empty Q', questions), 
@@ -248,3 +276,30 @@ results <- mirtCAT(df = df, mo = mod, criteria = "Drule", start_item = "DPrule",
                    shinyGUI = shinyGUI_list, design = design_list, preCAT = preCAT_list)
 summary(results)
 
+# customized answer function
+AnswerFuns <- as.list(rep(NA, nrow(df)))
+AnswerFuns[[1]] <- function(text) text == '147'
+results2 <- mirtCAT(df = df, mo = mod, criteria = "Drule", start_item = 1, AnswerFuns=AnswerFuns,
+                   shinyGUI = shinyGUI_list, design = design_list, preCAT = preCAT_list)
+summary(results2)
+
+#------------------------------------------------------------
+# reused custom choices
+myfun <- function(inputId, df_row){
+    with(df_row, 
+         tabsetPanel(tabPanel("Panel 1", tab.1), 
+                     tabPanel("Panel 2", tab.2), 
+                     tabPanel("Response", Question, 
+                              radioButtons(inputId = inputId, label='', 
+                                           choices = c(Options.1, Options.2), selected = ''))))
+}
+
+questions <- c('1) Text for response','2) Text for response','3) Text for response')
+tabs <- rbind(c('Text for tab1', 'Text for tab1'), 
+             NA, c('Different text for tab1', 'Different for tab1'))
+options <- matrix(c('True', 'False'), 3, 2, byrow=TRUE)
+
+df <- data.frame(Question = questions, Options=options, Type = c("myQ", 'radio', 'myQ'), 
+                 tab=tabs, stringsAsFactors = FALSE)
+results <- mirtCAT(df = df, customTypes=list(myQ=myfun))
+summary(results)

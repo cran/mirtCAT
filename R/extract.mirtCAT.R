@@ -35,6 +35,9 @@
 #'    \item{\code{min_items}}{minimum number of items to administer}
 #'    \item{\code{max_items}}{maximum number of items to administer}
 #'    \item{\code{max_time}}{maximum amount of time alloted to the GUI}
+#'    \item{\code{met_SEM}}{logical vector indicating whether the SEM criteria has been met}
+#'    \item{\code{met_delta_thetas}}{logical vector indicating whether the delta_thetas criteria has been met}
+#'    \item{\code{met_classify}}{logical vector indicating whether the classify criteria has been met}
 #'    \item{\code{exposure}}{exposure control elements of the same form as \code{responses}}
 #'    \item{\code{content}}{content constraint information}
 #'    \item{\code{content_prop}}{content proportions}
@@ -61,7 +64,8 @@
 #'   
 #' 
 #' @examples
-#'
+#' 
+#' \dontrun{
 #'  #example test
 #' set.seed(1234)
 #' nitems <- 25
@@ -142,6 +146,7 @@
 #'   criteria = 'MI', design = list(max_items = 10))
 #' summary(res2)
 #' 
+#' }
 extract.mirtCAT <- function(x, what){
     if(missing(x))
         stop('No person, test, or design input supplied', call.=FALSE)
@@ -168,6 +173,9 @@ extract.mirtCAT <- function(x, what){
                exposure = x@exposure,
                content = x@content,
                max_time = x@max_time,
+               met_SEM = x@met_SEM,
+               met_delta_theta = x@met_delta_theta,
+               met_classify = x@met_classify,
                test_properties = x@test_properties,
                person_properties = x@person_properties)
     } else stop('supplied object type not supported by extract.mirtCAT()', call.=FALSE)

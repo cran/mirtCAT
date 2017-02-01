@@ -38,9 +38,10 @@ mirtCAT_preamble <- function(..., final_fun = NULL){
 
 # set this up to avoid double documentation
 mirtCAT_preamble_internal <- 
-    function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq',
+    function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq', AnswerFuns = list(),
              start_item = 1, local_pattern = NULL, design_elements=FALSE, cl=NULL,
-             design = list(), shinyGUI = list(), preCAT = list(), final_fun = NULL, ...)
+             design = list(), shinyGUI = list(), preCAT = list(), customTypes = list(),
+             final_fun = NULL, ...)
     {
         is_adaptive <- !is.null(mo)
         Names <- if(!is.null(mo)) colnames(mo@Data$data) else NULL
@@ -68,25 +69,35 @@ mirtCAT_preamble_internal <-
                 }
             }, local_pattern=local_pattern, item_options=item_options, mins=mo@Data$mins)
         } else {
-            if(!is.data.frame(df) && !is.list(df))
-                stop('df input must be a data.frame or list', call.=FALSE)
-            if(is.data.frame(df)){
-                df <- lapply(df, as.character)
-                df$Question <- lapply(df$Question, function(x, fun) shiny::withMathJax(fun(x)),
-                                      fun=shinyGUI$stem_default_format)
+            if(!is.data.frame(df))
+                stop('df input must be a data.frame', call.=FALSE)
+            StemExpression <- if(is.null(df$StemExpression)) logical(length(df$Type))
+            else as.logical(df$StemExpression)
+            stem_expressions <- rep(NA, length(df$Type))
+            stem_expressions[StemExpression] <- df$Question[StemExpression]
+            df <- lapply(df, as.character)
+            for(i in 1L:length(df$Type))
+                if(StemExpression[i]) df$Question[i] <- ''
+            df$Rendered_Question <- lapply(df$Question, function(x, fun) shiny::withMathJax(fun(x)),
+                                  fun=shinyGUI$stem_default_format)
+            if(length(customTypes)){
+                pick <- df$Type %in% names(customTypes)
+                df$Rendered_Question[pick] <- ''
             }
-            obj <- buildShinyElements(df, itemnames = Names)
+            obj <- buildShinyElements(df, itemnames = Names, customTypes=customTypes)
             questions <- obj$questions
             item_answers <- obj$item_answers
             item_options <- obj$item_options
-            shinyGUI$stem_locations <- df$Stem
-            shinyGUI$stem_expressions <- df$StemExpression
+            shinyGUI$stem_locations <- df[["Stem"]]
+            shinyGUI$stem_expressions <- stem_expressions
         }
         if(is.null(mo)){
             dat <- matrix(c(0,1), 2L, length(questions))
             colnames(dat) <- if(!is.null(names(questions))) 
                 names(questions) else paste0('Item.', 1L:ncol(dat))
-            mo <- mirt(dat, 1L, TOL=NaN)
+            sv <- mirt(dat, 1L, pars = 'values')
+            sv$est <- FALSE
+            mo <- mirt(dat, 1L, TOL=NaN, pars=sv)
             score <- FALSE
             if(!(criteria %in% c('seq', 'random')))
                 stop('Only random and seq criteria are available if no mo was defined', call.=FALSE)
@@ -103,11 +114,11 @@ mirtCAT_preamble_internal <-
         }
         
         #setup objects
-        if(!is.null(df)) shinyGUI$stem_locations <- df$Stem
+        if(!is.null(df)) shinyGUI$stem_locations <- df[['Stem']]
         if(is.null(local_pattern)) 
             shinyGUI_object <- ShinyGUI$new(questions=questions, df=df, shinyGUI=shinyGUI,
-                                            adaptive=is_adaptive)
-        test_object <- new('Test', mo=mo, item_answers_in=item_answers, 
+                                            adaptive=is_adaptive, CustomTypes=customTypes)
+        test_object <- new('Test', mo=mo, item_answers_in=item_answers, AnswerFuns=AnswerFuns,
                            item_options=item_options, quadpts_in=design$quadpts,
                            theta_range_in=design$theta_range, dots=list(...))
         design_object <- new('Design', method=method, criteria=criteria, 

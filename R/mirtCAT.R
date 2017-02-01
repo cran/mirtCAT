@@ -17,8 +17,7 @@
 #' To access examples, vignettes, and exercise files that have been generated with \code{knitr} please
 #' visit \url{https://github.com/philchalmers/mirtCAT/wiki}.
 #' 
-#' @param df a \code{data.frame} or \code{list} object 
-#'   containing the \code{character} vector inputs required to generate 
+#' @param df a \code{data.frame} containing the \code{character} vector inputs required to generate 
 #'   GUI questions through shiny. If \code{factor}s are supplied instead of \code{character} vectors 
 #'   then the inputs will be coerced using the \code{as.character()} function (set 
 #'   \code{stringsAsFactors = FALSE} when defining a \code{data.frame} to avoid this). 
@@ -31,17 +30,36 @@
 #'     \item{\code{Type}}{Indicates the type of response input 
 #'       to use from the shiny package. The supported types are: \code{'radio'} for radio buttons 
 #'       (\code{\link{radioButtons}}), \code{'select'} for a pull-down box for selecting 
-#'       inputs (\code{\link{selectInput}}), \code{'text'} for requiring 
-#'       typed user input (\code{\link{textInput}}), \code{'checkbox'} for allowing multiple 
+#'       inputs (\code{\link{selectInput}}), \code{'text'} and \code{'textArea'} for requiring 
+#'       typed user input (\code{\link{textInput}} and \code{\link{textAreaInput}}), 
+#'       \code{'checkbox'} for allowing multiple 
 #'       responses to be checked off (\code{\link{checkboxGroupInput}}),
 #'       \code{'slider'} for generating slider inputs (\code{\link{sliderInput}}), or
 #'       \code{'none'} for presenting only an item stem with no selection options. Note that slider
-#'       inputs require additional arguments to be passed; see \code{...} instructions below).} 
+#'       inputs require additional arguments to be passed; see \code{...} instructions below).
+#'       
+#'       Additionally, if the above types are not sufficient for the desired output then users 
+#'       can create their own response formats and inputs via the \code{customTypes} list input 
+#'       (see below). E.g., if a function with the name \code{'MyTableQuestion'} is supplied 
+#'       to \code{customTypes} then supplying this type to the \code{df} will use this function for
+#'       the respective item. Note that this is more advanced and requires a working knowledge of shiny's 
+#'       design, inputs, and specifications. This is generally for advanced users
+#'       to use on an as-per-needed basis.} 
 #'     
-#'     \item{\code{Question}}{If \code{df} is a \code{data.frame}, a 
-#'       character vector containing all the questions or stems to be generated.
-#'       If \code{df} is a \code{list}, then the commands must be suitable for output with 
-#'       \code{shiny} (e.g., \code{Question <- list(h6('Item 1'), list(h6('Nested', h4(' item 2'))))})} 
+#'     \item{\code{Question}}{A character vector containing all the questions or stems to be generated.
+#'       Alternatively, when paired with the \code{StemExpression} logical value, 
+#'       each element may represent a character vector of arbitrary R expressions
+#'       to be evaluated as suitable item stems. These are rendered into suitable HTML code,
+#'       typically through shiny. This approach is much more verbose, however it provides a large variety 
+#'       of customization through the use of \code{div()} and other helpful tags. 
+#'       
+#'       E.g., the following would result in two bolded and italicized item stems: 
+#'       \code{c("tags$b('Stem 1')", "tags$em('Stem 2')")}, along with associated \code{TRUE} values
+#'       in \code{StemExpression}. See 
+#'       \code{http://shiny.rstudio.com/articles/tag-glossary.html} for more examples of how
+#'       to use tags and HTML generating functions.
+#'       
+#'       } 
 #'       
 #'     \item{\code{Option.#}}{Names pertaining to the possible response
 #'       options for each item, where the # corresponds to the specific category. For
@@ -58,21 +76,16 @@
 #'       pointing external markdown (.md) or HTML (.html) files to be used as item stems. 
 #'       \code{NA}s are used if the item has no corresponding file.} 
 #'       
-#'     \item{\code{StemExpression}}{(Optional) a character vector of arbitrary R expressions
-#'       to be evaluated as suitable item stems. These are rendered into suitable HTML code,
-#'       typically through shiny. E.g., the following would result in two 
-#'       bolded and italicized item stems: 
-#'       \code{StemExpression = c("tags$b('Stem 1')", "tags$em('Stem 2')")}. See 
-#'       \code{http://shiny.rstudio.com/articles/tag-glossary.html} for more examples of how
-#'       to use tags.}
+#'     \item{\code{StemExpression}}{(Optional) a logical vector indicating which \code{Question}
+#'       elements should be evaluated first in R. }
 #'       
-#'     \item{\code{...}}{ In cases where \code{'slider'} inputs are used instead only 
+#'     \item{\code{...}}{In cases where \code{'slider'} inputs are used instead only 
 #'       the \code{Question} input is required along with (at minimum) a 
 #'       \code{min}, \code{max}, and \code{step} column. In rows where the \code{Type == 'slider'} the 
 #'       column names will correspond to the input arguments to \code{\link{sliderInput}}. 
 #'       Other input column options such as \code{step}, \code{round}, \code{pre}, \code{post}, 
 #'       \code{ticks}, \code{inline}, \code{placeholder}, \code{width}, and \code{size} 
-#'       are also supported for the respective inputs.} 
+#'       are also supported for the respective input types.} 
 #'       
 #'   }
 #'   
@@ -84,7 +97,10 @@
 #'   
 #' @param method argument passed to \code{mirt::fscores()} for computing new scores in the CAT 
 #'   stage, with the addition of a \code{'fixed'} input to keep the latent trait estimates
-#'   fixed at the previous values. Default is 'MAP'
+#'   fixed at the previous values. When \code{method = 'ML'}, if there is no variability 
+#'   in the given response pattern during the CAT (i.e., the participant is responding completely
+#'   correctly or completely incorrectly) then the method will temporarily be set to MAP until 
+#'   sufficient response variability is present. Default is 'MAP'
 #' 
 #' @param criteria adaptive criteria used, default is to administer each item sequentially 
 #'   using \code{criteria = 'seq'}. 
@@ -138,6 +154,19 @@
 #'   then these values will be stored within the respective returned objects. 
 #'   See \code{\link{generate_pattern}} to generate response patterns for Monte Carlo simulations
 #'   
+#' @param AnswerFuns a list with the length equal to the number of items in the item bank consisting 
+#'   of user-defined functions. These functions are used to determine whether a given
+#'   response obtained from the GUI is 'correct' or 'incorrect' by returning a logical scalar value, 
+#'   while \code{NA}'s must be used to indicate \code{AnswerFuns} should not be used for a given item. Note 
+#'   that \code{AnswerFuns} is given priority over the answers provided by \code{df}, therefore any answers
+#'   provided by \code{df} will be entirely ignored.
+#'   
+#'   For example, the following provides a customized response function for the first item.
+#'   \preformatted{
+#'      AnswerFuns <- as.list(rep(NA, nrow(df)))
+#'      AnswerFuns[[1]] <- function(input) input == '10' || to.lower(input) == 'ten'
+#'   }
+#'   
 #' @param cl an object definition to be passed to the parallel package 
 #'   (see \code{?parallel::parLapply} for details). If defined, and if 
 #'   \code{nrow(local_pattern) > 1}, then each row will be run in parallel to help 
@@ -146,6 +175,30 @@
 #' @param primeCluster logical; when a \code{cl} object is supplied, should the cluster be primed 
 #'   first before running the simulations in parallel? Setting to \code{TRUE} will ensure that 
 #'   using the cluster will be optimal every time a new \code{cl} is defined. Default is \code{TRUE}
+#'   
+#' @param customTypes an optional list input containing user-defined item formatting generating functions.
+#'   Each element supplied must contain a unique name, and the item with which it is associated must be
+#'   declared in the a \code{df$Type} input. The functions defined must be of the form
+#'   
+#'   \preformatted{myfun <- function(inputId, df_row) ...}
+#'   
+#'   and must return, at the very minimum, an associated \code{shiny} input object that makes use of the
+#'   \code{inputId} argument (e.g., \code{\link{radioButtons}}). Any valid shiny object can be returned,
+#'   including lists of shiny objects. As well, the \code{df_row} argument contains
+#'   any extra information the users wishes to obtain from the associated row in the \code{df} object. 
+#'   
+#'   The following is a simple example of a custom-defined true-false question and how it is passed:   
+#'   \preformatted{
+#'   myfun <- function(inputId, df_row){
+#'      return(list(h2('This statement is false'),
+#'                  radioButtons(inputId = inputId, label='', 
+#'                               choices = c('True', 'False'), selected = '') 
+#'           ))
+#'      }
+#'      
+#'   df <- data.frame(Question = '', ..., Type = 'myQuestion') 
+#'   results <- mirtCAT(df=df, customTypes = list(myQuestion = myfun))
+#'   }
 #'   
 #' @param design_elements logical; return an object containing the test, person, and design 
 #'   elements? Primarily this is to be used with the \code{\link{findNextItem}} function
@@ -326,12 +379,13 @@
 #'     \code{'Author of survey'}. If the input is an empty string (\code{''}) then the author 
 #'     information will be omitted in the GUI}
 #'     
-#'   \item{\code{instructions}}{A three part character vector indicating how to use the GUI. 
+#'   \item{\code{instructions}}{A two part character vector indicating how to use the GUI. 
 #'     Default is: 
 #'   
-#'     \preformatted{c("Instructions:", 
-#'        "To progress through the interface, click on the action button below.",
+#'     \preformatted{c("To progress through the interface, click on the action button below.",
 #'        "Next")}
+#'        
+#'     The second part of the character vector provides the name for the action button.
 #'   }
 #'
 #'   \item{\code{firstpage}}{The first page of the shiny GUI. Default prints the title
@@ -400,10 +454,17 @@
 #'    \item{\code{css}}{a character string defining CSS elements to modify the GUI presentation 
 #'      elements. The input string is passed to the argument \code{tags$style(HTML(shinyGUI$css))}
 #'      prior to constructing the user interface}
+#'  
+#'    \item{\code{theme}}{a character definition for the \code{shinytheme} package to globally change 
+#'      the GUI theme}
 #'      
 #'    \item{\code{forced_choice}}{logical; require a response to each item? Default is \code{TRUE}.
 #'      This should only be set to \code{FALSE} for surveys (not CATs)}
 #'      
+#'    \item{\code{time_before_answer}}{a numeric value representing the number of seconds that must have elapsed
+#'      when \code{forced_choice = FALSE} before a response can be provided or skipped. This is used 
+#'      to control accidental skips over items when responses are not forced. Default is 1, indicating
+#'      one full second}
 #'      
 #'    \item{\code{password}}{a \code{data.frame} object indicating the user name (optional) and password
 #'      required prior to beginning the CAT. Possible options are
@@ -624,17 +685,19 @@
 #' 
 #' }
 mirtCAT <- function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq', 
-                    start_item = 1, local_pattern = NULL, 
+                    start_item = 1, local_pattern = NULL, AnswerFuns = list(), 
                     design_elements = FALSE, cl = NULL, progress = FALSE, 
-                    primeCluster = TRUE, design = list(), shinyGUI = list(), preCAT = list(), ...)
+                    primeCluster = TRUE, customTypes = list(), 
+                    design = list(), shinyGUI = list(), preCAT = list(), ...)
 {   
     on.exit({.MCE$person <- .MCE$test <- .MCE$design <- .MCE$shinyGUI <- .MCE$start_time <- 
              .MCE$STOP <- .MCE$outfile <- .MCE$outfile2 <- .MCE$last_demographics <- 
              .MCE$preamble_defined <- NULL})
     mirtCAT_preamble(df=df, mo=mo, method=method, criteria=criteria, 
                      start_item=start_item, local_pattern=local_pattern, 
-                     design_elements=design_elements, cl=cl,
-                     design=design, shinyGUI=shinyGUI, preCAT=preCAT, ...)
+                     design_elements=design_elements, cl=cl, AnswerFuns=AnswerFuns, 
+                     design=design, shinyGUI=shinyGUI, preCAT=preCAT, 
+                     customTypes=customTypes, ...)
     if(design_elements){
         ret <- list(person=.MCE$person, test=.MCE$test, design=.MCE$design)
         class(ret) <- "mirtCAT_design"
@@ -644,6 +707,8 @@ mirtCAT <- function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq',
         runApp(createShinyGUI(ui=.MCE$shinyGUI$ui), launch.browser=TRUE, ...)
         person <- .MCE$person
     } else {
+        if(length(AnswerFuns)) 
+            stop('AnswerFuns cannot be used for off-line runs', call.=FALSE)
         person <- run_local(.MCE$local_pattern, nfact=.MCE$test@nfact, start_item=start_item,
                             nitems=length(.MCE$test@itemnames), cl=cl, primeCluster=primeCluster,
                             thetas.start_in=design$thetas.start, score=.MCE$score, 

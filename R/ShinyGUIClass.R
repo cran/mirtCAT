@@ -13,22 +13,31 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                     stem_expressions = 'character',
                                     demographic_inputIDs = 'character',
                                     temp_file = 'character',
+                                    customTypes = 'list',
                                     width = 'numeric',
                                     height = 'numeric',
                                     forced_choice = 'logical',
+                                    time_before_answer = 'numeric',
                                     password='data.frame',
                                     css = 'character',
                                     stopApp = 'logical',
-                                    ui = 'function'),
+                                    ui = 'function',
+                                    theme = 'character'),
                       
                       methods = list(
-                          initialize = function(questions, df, shinyGUI, adaptive){
+                          initialize = function(questions, df, shinyGUI, adaptive, CustomTypes){
                               'Initialize the shiny GUI given questions, df, and shinyGUI list'
                               ui <<- default_UI
                               questions <<- questions
                               df <<- df
                               forced_choice <<- TRUE
                               stopApp <<- TRUE
+                              theme <<- ''
+                              if(length(CustomTypes)){
+                                  if(length(CustomTypes) != length(unique(names(CustomTypes))))
+                                      stop('customTypes list requires unique names for each function', call.=FALSE)
+                              }
+                              customTypes <<- CustomTypes
                               if(is.null(shinyGUI$stem_locations)){
                                   stem_locations <<- as.character(rep(NA, length(questions)))
                               } else {
@@ -57,8 +66,7 @@ ShinyGUI <- setRefClass("ShinyGUI",
                               
                               title <<- 'mirtCAT'
                               author <<- 'Author information'
-                              instructions <<- c("Instructions:",
-                                                 "To progress through the interface, click on the action button below.",
+                              instructions <<- c("To progress through the interface, click on the action button below.",
                                                  "Next")
                               demographic_inputIDs <<- character(0)
                               if(adaptive){
@@ -78,6 +86,7 @@ ShinyGUI <- setRefClass("ShinyGUI",
                               temp_file <<- ''
                               css <<- ''
                               password <<- data.frame()
+                              time_before_answer <<- 1
                                                  
                               if(length(shinyGUI)){
                                   dnames <- names(shinyGUI)
@@ -85,12 +94,14 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                               'demographics_inputIDs', 'max_time', 'temp_file', 
                                               'lastpage', 'css', 'stem_dims', 'forced_choice', 'stem_locations',
                                               'begin_message', 'stopApp', 'ui', 'password', 'stem_default_format',
-                                              'stem_expressions')
+                                              'stem_expressions', 'theme', 'time_before_answer')
                                   if(!all(dnames %in% gnames))
                                       stop('The following inputs to shinyGUI are invalid: ',
                                            paste0(dnames[!(dnames %in% gnames)], ' '), call.=FALSE)
                                   if(!is.null(shinyGUI$ui))
                                       ui <<- shinyGUI$ui
+                                  if(!is.null(shinyGUI$theme))
+                                      theme <<- shinyGUI$theme
                                   if(!is.null(shinyGUI$instructions))
                                       instructions <<- shinyGUI$instructions
                                   if(!is.null(shinyGUI$begin_message))
@@ -117,6 +128,8 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                       css <<- shinyGUI$css
                                   if(!is.null(shinyGUI$password))
                                       password <<- shinyGUI$password
+                                  if(!is.null(shinyGUI$time_before_answer))
+                                      time_before_answer <<- shinyGUI$time_before_answer
                               }
                           })
                       

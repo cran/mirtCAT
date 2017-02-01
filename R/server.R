@@ -61,7 +61,7 @@ server <- function(input, output) {
             .MCE$resume_file <- FALSE
             item <- max(which(!is.na(.MCE$person$items_answered)))
             stemOutput <- stemContent(item)
-            return(list(stemOutput,.MCE$shinyGUI$df$Question[[item]], 
+            return(list(stemOutput,.MCE$shinyGUI$df$Rendered_Question[[item]], 
                         .MCE$shinyGUI$questions[[item]]))
         }
         
@@ -90,11 +90,14 @@ server <- function(input, output) {
                             .MCE$person$responses[pick] <- sum(.MCE$test@item_options[[pick]] %in% ip)
                         else .MCE$person$responses[pick] <- which(.MCE$test@item_options[[pick]] %in% ip) - 1L
                     }
-                    if(!is.na(.MCE$test@item_answers[[pick]]) && 
-                           .MCE$test@item_class[pick] != 'nestlogit'){
-                        if(nanswers > 1L)
-                            .MCE$person$responses[pick] <- as.integer(sum(ip %in% .MCE$test@item_answers[[pick]]))
-                        else .MCE$person$responses[pick] <- as.integer(ip %in% .MCE$test@item_answers[[pick]])
+                    if(.MCE$test@item_class[pick] != 'nestlogit'){
+                        if(is.function(.MCE$test@AnswerFuns[[pick]])){
+                            .MCE$person$responses[pick] <- as.integer(.MCE$test@AnswerFuns[[pick]](ip))
+                        } else if(!is.na(.MCE$test@item_answers[[pick]])){
+                            if(nanswers > 1L)
+                                .MCE$person$responses[pick] <- as.integer(sum(ip %in% .MCE$test@item_answers[[pick]]))
+                            else .MCE$person$responses[pick] <- as.integer(ip %in% .MCE$test@item_answers[[pick]])
+                        } 
                     }
                     .MCE$person$item_time[pick] <- proc.time()[3L] - .MCE$start_time
                     .MCE$start_time <- NULL
@@ -105,13 +108,15 @@ server <- function(input, output) {
                         saveRDS(.MCE$person, .MCE$shinyGUI$temp_file)
                     .MCE$design <- Update.stop_now(.MCE$design, .MCE$person)
                 } else {
-                    if(.MCE$shinyGUI$forced_choice && df$Type[pick] != 'none'){
+                    if(.MCE$shinyGUI$time_before_answer >= (proc.time()[3L] - .MCE$start_time) || 
+                       (.MCE$shinyGUI$forced_choice && df$Type[pick] != 'none')){
                         .MCE$shift_back <- .MCE$shift_back + 1L
                         .MCE$invalid_count <- .MCE$invalid_count + 1L
                         tmp <- lapply(.MCE$shinyGUI$df, function(x, pick) x[pick], pick=pick)
-                        tmp <- buildShinyElements(tmp, paste0(.MCE$invalid_count, '.TeMpInTeRnAl', name))
+                        tmp <- buildShinyElements(questions=tmp, customTypes=.MCE$shinyGUI$customTypes, 
+                                                  itemnames=paste0(.MCE$invalid_count, '.TeMpInTeRnAl', name))
                         stemOutput <- stemContent(pick)
-                        return(list(stemOutput, .MCE$shinyGUI$df$Question[[pick]], 
+                        return(list(stemOutput, .MCE$shinyGUI$df$Rendered_Question[[pick]], 
                                     tmp$questions))
                     } else {
                         .MCE$person$item_time[pick] <- proc.time()[3L] - .MCE$start_time
@@ -129,7 +134,8 @@ server <- function(input, output) {
             .MCE$design <- Next.stage(.MCE$design, person=.MCE$person, test=.MCE$test, item=itemclick)
             
             if(!.MCE$design@stop_now){
-                item <- findNextCATItem(person=.MCE$person, test=.MCE$test, 
+                item <- if(all(is.na(.MCE$person$items_answered))) .MCE$design@start_item
+                    else findNextCATItem(person=.MCE$person, test=.MCE$test, 
                                         design=.MCE$design, start=FALSE)
                 if(!is.null(attr(item, 'design'))) .MCE$design <- attr(item, 'design')
                 if(is.na(item)){
@@ -142,7 +148,7 @@ server <- function(input, output) {
                         saveRDS(.MCE$person, .MCE$shinyGUI$temp_file)
                     stemOutput <- stemContent(item)
                     return(list(stemOutput, 
-                                .MCE$shinyGUI$df$Question[[item]], 
+                                .MCE$shinyGUI$df$Rendered_Question[[item]], 
                                 .MCE$shinyGUI$questions[[item]]))
                 }
             }

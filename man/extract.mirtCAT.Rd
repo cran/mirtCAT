@@ -52,6 +52,9 @@ Depending on which object is supplied, the following elements can be extracted.
    \item{\code{min_items}}{minimum number of items to administer}
    \item{\code{max_items}}{maximum number of items to administer}
    \item{\code{max_time}}{maximum amount of time alloted to the GUI}
+   \item{\code{met_SEM}}{logical vector indicating whether the SEM criteria has been met}
+   \item{\code{met_delta_thetas}}{logical vector indicating whether the delta_thetas criteria has been met}
+   \item{\code{met_classify}}{logical vector indicating whether the classify criteria has been met}
    \item{\code{exposure}}{exposure control elements of the same form as \code{responses}}
    \item{\code{content}}{content constraint information}
    \item{\code{content_prop}}{content proportions}
@@ -70,6 +73,7 @@ Depending on which object is supplied, the following elements can be extracted.
 }
 \examples{
 
+\dontrun{
  #example test
 set.seed(1234)
 nitems <- 25
@@ -150,6 +154,7 @@ res2 <- mirtCAT(df, mod, local_pattern=pat, start_item = 'MI',
   criteria = 'MI', design = list(max_items = 10))
 summary(res2)
 
+}
 }
 \author{
 Phil Chalmers \email{rphilip.chalmers@gmail.com}

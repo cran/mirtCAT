@@ -1,3 +1,23 @@
+# mirtCAT 1.3
+
+- removed support for a list input for `df` object in place of a more flexible format which supports
+  the artibrary creation of user-defined item formats through the new `customTypes` argument. This 
+  is to be used in conjunction with the `df$Type` input to pair the respective inputs
+
+- added `time_before_answer` to `shinyGUI` list to include a require number of seconds to wait 
+  before a valid/ommited response can be accepted
+
+- add `textAreaInput` support to GUI for include text-boxes as possible inputs
+
+- `df$StemExpression` is now instead a logical vector used to indicate whether 
+  the questions definition should be evaulated in R first
+
+- added `AnswerFun` input to allow for user-defined functions for each respective item to 
+  determine whether the answer provided is correct or incorrect. Mainly useful for text-based 
+  items (suggested by Anna Mikolajetz)
+  
+- added a `theme` input to `shinyGUI` to support predefined themes from the "shinythemes"" package
+
 # mirtCAT 1.2
 
 - `progress` logical added to `mirtCAT()` to print the progress of Monte Carlo simulations
