@@ -73,8 +73,8 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                 begin_message <<- "Click the action button to begin."
                               } else begin_message <<- ""
                               firstpage <<- list(h1('Welcome to the mirtCAT interface'),
-                                                 'The following interface was created using the mirtCAT package. 
-                                                 To cite the package use citation(\'mirtCAT\') in R.')
+                                                 sprintf('The following interface was created using the mirtCAT package v%s. 
+                                                 To cite the package use citation(\'mirtCAT\') in R.', packageVersion("mirtCAT")))
                               demographics <<- list()
                               lastpage <<- function(person) 
                                             return(list(h5("You have successfully completed the interface.
@@ -91,7 +91,7 @@ ShinyGUI <- setRefClass("ShinyGUI",
                               if(length(shinyGUI)){
                                   dnames <- names(shinyGUI)
                                   gnames <- c('title', 'authors', 'instructions', 'firstpage', 'demographics',
-                                              'demographics_inputIDs', 'max_time', 'temp_file', 
+                                              'demographics_inputIDs', 'temp_file', 
                                               'lastpage', 'css', 'stem_dims', 'forced_choice', 'stem_locations',
                                               'begin_message', 'stopApp', 'ui', 'password', 'stem_default_format',
                                               'stem_expressions', 'theme', 'time_before_answer')

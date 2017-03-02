@@ -4,7 +4,8 @@
 \alias{computeCriteria}
 \title{Compute the values given the criteria and internal objects}
 \usage{
-computeCriteria(x, criteria, person = NULL, test = NULL, design = NULL)
+computeCriteria(x, criteria, person = NULL, test = NULL, design = NULL,
+  subset = NULL, info_mats = FALSE)
 }
 \arguments{
 \item{x}{an object of class 'mirtCAT_design' returned from the \code{\link{mirtCAT}} function
@@ -20,13 +21,25 @@ used when \code{customNextItem} function has been defined}
 
 \item{design}{(required when \code{x} is missing) internal design object. To be 
 used when \code{customNextItem} function has been defined}
+
+\item{subset}{an integer vector indicating which items should be included in the optimal search;
+the default \code{NULL} includes all possible items. To allow only the first 10 items to be 
+selected from this can be modified to \code{subset = 1:10}. This is useful when administering 
+a multi-unidimensional CAT session where unidimensional blocks should be clustered together 
+for smoother presentation. Useful when using the \code{customNextItem} function in 
+\code{\link{mirtCAT}}}
+
+\item{info_mats}{logical; if more than one trait is present in the test, should the repective information
+matricies be returned instead of the scalar summary statistics (e.g., D-rule). When TRUE will 
+return a list of matricies associated with each respective item}
 }
 \value{
 a vector of criteria values for each respective item
 }
 \description{
-A function that returns a vector of evaluated criteria for each respective item in the 
-test bank. Note that criteria values are returned such that the maximum value always 
+A function that returns a named vector of evaluated criteria for each respective item in the 
+test bank. The names are associated with the item number in the bank. 
+Note that criteria values are returned such that the maximum value always 
 represents the most optimal item (e.g., maximum information). In cases where the minimum value is 
 typically selected (e.g., minimum variance) all values are multiplied by -1 to turn it into a maximization
 problem.
@@ -41,11 +54,10 @@ computeCriteria(CATdesign, criteria = 'MEI')
 
 }
 }
-\author{
-Phil Chalmers \email{rphilip.chalmers@gmail.com}
-}
 \seealso{
 \code{\link{mirtCAT}}, \code{\link{updateDesign}}, \code{\link{extract.mirtCAT}},
   \code{\link{findNextItem}}
 }
-
+\author{
+Phil Chalmers \email{rphilip.chalmers@gmail.com}
+}

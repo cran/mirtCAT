@@ -48,6 +48,7 @@ summary.mirtCAT <- function(object, sort = TRUE, ...){
                 thetas_history=object$thetas_history, 
                 thetas_SE_history=object$thetas_SE_history,
                 demographics=object$demographics)
+    if(object$GUI) ret$terminated_sucessfully <- object$terminated_sucessfully
     if(!is.null(object$true_thetas)) ret$true_thetas <- object$true_thetas
     if(!length(object$login_name)) ret$login_name <- NULL
     if(is.null(person)) ret$final_estimates <- NULL
@@ -87,7 +88,7 @@ plot.mirtCAT <- function(x, pick_theta = NULL, true_thetas = TRUE, SE = 1, main 
                          ...){
     if(length(x$thetas_SE_history) == 1L || is.na(x$thetas_SE_history))
         stop('plot not available for non-adaptive tests', call.=FALSE)
-    p <- floor((1-(pnorm(-abs(SE))*2))*100)
+    p <- ceiling((1-(pnorm(-abs(SE))*2))*100)
     if(is.null(main)){
         if(SE == 1)
             main <- 'CAT Standard Errors'

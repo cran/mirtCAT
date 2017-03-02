@@ -10,6 +10,8 @@ questions <- c("Building CATs with mirtCAT is difficult.",
                "mirtCAT requires a substantial amount of coding.",
                "I would use mirtCAT in my research.")
 df <- data.frame(Question = questions, Option = options, Type = "radio")
+# df$Answer <- NA
+# df$Answer[1] <- 'Agree'
 
 # forced
 results <- mirtCAT(df = df)
@@ -59,7 +61,8 @@ lastpagefun <- function(person){
 results2 <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE, lastpage=lastpagefun))
 
 # save and resume temp file
-mirtCAT(df = df, shinyGUI = list(temp_file = 'thisfile.rds')) #stop early
+results <- mirtCAT(df = df, shinyGUI = list(temp_file = 'thisfile.rds')) #stop early
+summary(results)
 results <- mirtCAT(df = df, shinyGUI = list(temp_file = 'thisfile.rds')) #this resumes and deletes
 summary(results)
 
@@ -277,8 +280,11 @@ results <- mirtCAT(df = df, mo = mod, criteria = "Drule", start_item = "DPrule",
 summary(results)
 
 # customized answer function
+preCAT_list$max_items <- 1
+design_list$max_items <- 2
 AnswerFuns <- as.list(rep(NA, nrow(df)))
 AnswerFuns[[1]] <- function(text) text == '147'
+df$Type[1] <- 'text'
 results2 <- mirtCAT(df = df, mo = mod, criteria = "Drule", start_item = 1, AnswerFuns=AnswerFuns,
                    shinyGUI = shinyGUI_list, design = design_list, preCAT = preCAT_list)
 summary(results2)

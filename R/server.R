@@ -1,4 +1,12 @@
-server <- function(input, output) {    
+server <- function(input, output, session) {    
+    
+    session$onSessionEnded(function() {
+        if(!.MCE$design@stop_now){
+            warning('Session unexpectedly terminated early', call.=FALSE)
+            .MCE$person$terminated_sucessfully <- FALSE
+        } else .MCE$person$terminated_sucessfully <- TRUE
+        stopApp()
+    })
     
     output$Main <- renderUI({
         dynamicUi()
@@ -103,13 +111,14 @@ server <- function(input, output) {
                     .MCE$start_time <- NULL
                     
                     #update Thetas
-                    .MCE$person$Update.thetas(.MCE$design, .MCE$test)
+                    .MCE$design@Update.thetas(design=.MCE$design, person=.MCE$person, test=.MCE$test)
+                    .MCE$person$Update.info_mats(design=.MCE$design, test=.MCE$test)
                     if(.MCE$shinyGUI$temp_file != '')
                         saveRDS(.MCE$person, .MCE$shinyGUI$temp_file)
-                    .MCE$design <- Update.stop_now(.MCE$design, .MCE$person)
+                    .MCE$design <- Update.stop_now(.MCE$design, person=.MCE$person)
                 } else {
                     if(.MCE$shinyGUI$time_before_answer >= (proc.time()[3L] - .MCE$start_time) || 
-                       (.MCE$shinyGUI$forced_choice && df$Type[pick] != 'none')){
+                       (.MCE$shinyGUI$forced_choice && .MCE$shinyGUI$df$Type[pick] != 'none')){
                         .MCE$shift_back <- .MCE$shift_back + 1L
                         .MCE$invalid_count <- .MCE$invalid_count + 1L
                         tmp <- lapply(.MCE$shinyGUI$df, function(x, pick) x[pick], pick=pick)
@@ -122,10 +131,11 @@ server <- function(input, output) {
                         .MCE$person$item_time[pick] <- proc.time()[3L] - .MCE$start_time
                         .MCE$start_time <- NULL
                         #update Thetas (same as above)
-                        .MCE$person$Update.thetas(.MCE$design, .MCE$test)
+                        .MCE$design@Update.thetas(design=.MCE$design, person=.MCE$person, test=.MCE$test)
+                        .MCE$person$Update.info_mats(design=.MCE$design, test=.MCE$test)
                         if(.MCE$shinyGUI$temp_file != '')
                             saveRDS(.MCE$person, .MCE$shinyGUI$temp_file)
-                        .MCE$design <- Update.stop_now(.MCE$design, .MCE$person)
+                        .MCE$design <- Update.stop_now(.MCE$design, person=.MCE$person)
                         .MCE$person$valid_item[pick] <- FALSE
                     }
                 }
@@ -158,7 +168,8 @@ server <- function(input, output) {
         if(!.MCE$STOP){
             .MCE$STOP <- TRUE
             if(!is.null(.MCE$final_fun)){
-                ret <- mirtCAT_post_internal(person=.MCE$person, design=.MCE$design)
+                ret <- mirtCAT_post_internal(person=.MCE$person, design=.MCE$design,
+                                             has_answers=.MCE$test@has_answers, GUI=TRUE)
                 .MCE$final_fun(person = ret)
             }
             if(.MCE$shinyGUI$temp_file != '')

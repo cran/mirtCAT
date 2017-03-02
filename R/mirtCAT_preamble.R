@@ -71,6 +71,10 @@ mirtCAT_preamble_internal <-
         } else {
             if(!is.data.frame(df))
                 stop('df input must be a data.frame', call.=FALSE)
+            if(any(sapply(df, class) == 'factor'))
+                stop('data.frame requires characters instead of factors. 
+                        To avoid, use stringsAsFactors = FALSE in your data.frame',
+                        call.=FALSE)
             StemExpression <- if(is.null(df$StemExpression)) logical(length(df$Type))
             else as.logical(df$StemExpression)
             stem_expressions <- rep(NA, length(df$Type))
@@ -122,8 +126,7 @@ mirtCAT_preamble_internal <-
                            item_options=item_options, quadpts_in=design$quadpts,
                            theta_range_in=design$theta_range, dots=list(...))
         design_object <- new('Design', method=method, criteria=criteria, 
-                             start_item=if(is.numeric(start_item)) start_item else NaN,
-                             max_time=shinyGUI$max_time, 
+                             start_item=if(is.numeric(start_item)) start_item else NaN, 
                              nfact=test_object@nfact, design=design, 
                              preCAT=preCAT, nitems=test_object@length)
         person_object <- Person$new(nfact=test_object@nfact, nitems=length(test_object@itemnames), 
@@ -171,15 +174,15 @@ mirtCAT_preamble_internal <-
     }
 
 
-mirtCAT_post_internal <- function(person, design){
+mirtCAT_post_internal <- function(person, design, has_answers = FALSE, GUI = FALSE){
     if(!is.list(person)) person <- list(person)
     ret.out <- vector('list', length(person))
     for(i in 1L:length(person)){
         person[[i]]$items_answered <- person[[i]]$items_answered[!is.na(person[[i]]$items_answered)]
         ret <- list(login_name=person[[i]]$login_name,
                     raw_responses=person[[i]]$raw_responses,
-                    scored_responses=if(person[[1L]]$score) as.integer(person[[i]]$responses + 
-                                                                           .MCE$mirt_mins) 
+                    scored_responses=if(person[[1L]]$score || has_answers) 
+                        as.integer(person[[i]]$responses + .MCE$mirt_mins) 
                     else rep(NA, length(person[[i]]$raw_responses)),
                     items_answered=person[[i]]$items_answered,
                     thetas=person[[i]]$thetas,
@@ -188,7 +191,9 @@ mirtCAT_post_internal <- function(person, design){
                     thetas_history=person[[i]]$thetas_history,
                     thetas_SE_history=person[[i]]$thetas_SE_history,
                     item_time=person[[i]]$item_time,
-                    demographics=person[[i]]$demographics)
+                    demographics=person[[i]]$demographics,
+                    terminated_sucessfully=person[[i]]$terminated_sucessfully,
+                    GUI=GUI)
         if(length(person[[i]]$true_thetas))
             ret$true_thetas <- person[[i]]$true_thetas
         if(!is.nan(design@classify[1L])){

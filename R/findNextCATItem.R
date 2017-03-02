@@ -74,9 +74,8 @@
 #' findNextItem(CATdesign)
 #' findNextItem(CATdesign, all_index = TRUE) # all items rank in terms of most optimal
 #' 
-#' # alternatively, update the Theta using the internal ReferenceClass method
-#' Person$help('Update.thetas') # internal help file for class 'Person'
-#' CATdesign$person$Update.thetas(CATdesign$design, CATdesign$test) 
+#' # alternatively, update the Theta using the Update.thetas definition in design
+#' CATdesign$design@Update.thetas(CATdesign$design, CATdesign$person, CATdesign$test) 
 #' findNextItem(CATdesign)
 #' 
 #' 
@@ -90,7 +89,7 @@
 #' #  x5 + x6 == 1               ### item 5 or 6 must be included, but not both
 #' 
 #' # constraint function
-#' constr_fun <- function(person, test, design){
+#' constr_fun <- function(design, person, test){
 #'
 #'   # left hand side constrains 
 #'   #    - 1 row per constraint, and ncol must equal number of items
@@ -123,10 +122,10 @@
 #' findNextItem(CATdesign, objective=objective)
 #' 
 #' # all the items which solve the problem
-#' findNextItemp(CATdesign, objective=objective, all_index = TRUE)
+#' findNextItem(CATdesign, objective=objective, all_index = TRUE)
 #' 
 #' ## within a customNextItem() definition the above code would look like
-#' # customNextItem <- function(person, design, test){
+#' # customNextItem <- function(design, person, test){
 #' #   objective <- computeCriteria(person=person, design=design, test=test, 
 #' #                                criteria = 'MI') 
 #' #   item <- findNextItem(person=person, design=design, test=test,
@@ -155,7 +154,7 @@ findNextItem <- function(x, person = NULL, test = NULL, design = NULL, criteria 
        findNextCATItem(person=person, test=test, design=design,
                        subset=subset, all_index=all_index)
     }
-    ret
+    unname(ret)
 }
 
 findNextCATItem <- function(person, test, design, subset = NULL, start = TRUE,
@@ -277,10 +276,15 @@ findNextCATItem <- function(person, test, design, subset = NULL, start = TRUE,
     } else if(criteria == 'Wrule' || criteria == 'WPrule'){
         Wrule(which_not_answered=which_not_answered, person=person, test=test,
               design=design, thetas=thetas)
+    } else if(criteria == 'info_mats'){
+        InfoMats(which_not_answered=which_not_answered, person=person, test=test, thetas=thetas)
     } else {
         stop('Selection criteria does not exist', call.=FALSE)
     }
-    if(values) return(crit)
+    if(values){
+        names(crit) <- which_not_answered
+        return(crit)
+    }
     if(all_index) return(index[order(crit, decreasing = TRUE)])
     
     if(design@use_content){

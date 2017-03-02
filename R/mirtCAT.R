@@ -122,11 +122,6 @@
 #'   the weighted information criteria. For each of these rules, the posterior weight for 
 #'   the latent trait scores can also be included with the \code{'DPrule'}, \code{'TPrule'},
 #'   \code{'APrule'}, \code{'EPrule'}, and \code{'WPrule'}, respectively. 
-#'   As a safety precaution, if the 
-#'   selected criteria do not weight by the posterior (and therefore do not exist for 
-#'   extreme response styles) and less than 5 items have been administered then 
-#'   the method is temporarily switched to the posterior weighting
-#'   until a variable response pattern is observed.
 #'   
 #'   Applicable to both unidimensional and multidimensional tests are the
 #'   \code{'KL'} and \code{'KLn'} for point-wise Kullback-Leibler divergence and 
@@ -134,7 +129,7 @@
 #'   where \code{n} is the number of items previous answered), respectively. 
 #'   The \code{delta} criteria is defined in the \code{design} object
 #'   
-#'   Non-adaptive methods applicable even when no \code{mo} is passed 
+#'   Non-adaptive methods applicable even when no \code{mo} object is passed 
 #'   are: \code{'random'} to randomly select items, and \code{'seq'} for selecting 
 #'   items sequentially.
 #'   
@@ -176,28 +171,28 @@
 #'   first before running the simulations in parallel? Setting to \code{TRUE} will ensure that 
 #'   using the cluster will be optimal every time a new \code{cl} is defined. Default is \code{TRUE}
 #'   
-#' @param customTypes an optional list input containing user-defined item formatting generating functions.
-#'   Each element supplied must contain a unique name, and the item with which it is associated must be
+#' @param customTypes an optional list input contaning functions for Designing Original Graphical Stimuli (DOGS).
+#'   DOGS elements in the input list must contain a unique name, and the item with which it is associated must be
 #'   declared in the a \code{df$Type} input. The functions defined must be of the form
 #'   
-#'   \preformatted{myfun <- function(inputId, df_row) ...}
+#'   \preformatted{myDOGS <- function(inputId, df_row) ...}
 #'   
 #'   and must return, at the very minimum, an associated \code{shiny} input object that makes use of the
 #'   \code{inputId} argument (e.g., \code{\link{radioButtons}}). Any valid shiny object can be returned,
 #'   including lists of shiny objects. As well, the \code{df_row} argument contains
 #'   any extra information the users wishes to obtain from the associated row in the \code{df} object. 
 #'   
-#'   The following is a simple example of a custom-defined true-false question and how it is passed:   
+#'   The following is a simple example of DOGS for a true-false question and how it is passed:   
 #'   \preformatted{
-#'   myfun <- function(inputId, df_row){
+#'   good_dogs <- function(inputId, df_row){
 #'      return(list(h2('This statement is false'),
 #'                  radioButtons(inputId = inputId, label='', 
 #'                               choices = c('True', 'False'), selected = '') 
 #'           ))
 #'      }
 #'      
-#'   df <- data.frame(Question = '', ..., Type = 'myQuestion') 
-#'   results <- mirtCAT(df=df, customTypes = list(myQuestion = myfun))
+#'   df <- data.frame(Question = '', ..., Type = 'Doug') 
+#'   results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
 #'   }
 #'   
 #' @param design_elements logical; return an object containing the test, person, and design 
@@ -228,6 +223,10 @@
 #'   
 #'   \item{\code{max_items}}{maximum number of items that 
 #'     can be answered. Default is the length of the item bank}
+#'     
+#'   \item{\code{max_time}}{maximum time allowed for the generated GUI, measured
+#'     in seconds. For instance, if the test should stop after 10 minutes then the number 
+#'     600 should be passed (10 * 60). Default is \code{Inf}, therefore no time limit}
 #'   
 #'   \item{\code{quadpts}}{Number of quadrature points used per dimension 
 #'     for integration (if required). Default is identical to scheme in \code{\link{fscores}}}
@@ -238,7 +237,7 @@
 #' 
 #'   \item{\code{weights}}{weights used when \code{criteria == 'Wrule'}, but also 
 #'     will be applied for weighted trace functions in the T- and A-rules. The default 
-#'     weights the latent dimensions equally. Default is \code{rep(1/nfact), nfact)}, 
+#'     weights the latent dimensions equally. Default is \code{rep(1, nfact)}, 
 #'     where \code{nfact} is the number of test dimensions}
 #'     
 #'   \item{\code{KL_delta}}{interval range used when \code{criteria = 'KL'}
@@ -305,6 +304,33 @@
 #'     }
 #'   }
 #'   
+#'   \item{\code{customUpdateThetas}}{a more advanced function of the form 
+#'     \code{customUpdateThetas <- function(design, person, test)}      
+#'     to update the ability/latent trait estimates throughout the CAT (or more generally, scoring) session.
+#'     The \code{design}, \code{person}, and \code{test} are the same as in 
+#'     \code{customNextItem}. 
+#'     The latent trait terms are updated directly in the \code{person} object, which is a 
+#'     \code{\link{ReferenceClasses}} type, and therefore direct assignment to the object will modify the internal
+#'     elements. The function should return \code{invisible()} as well, because the purpose is only to update 
+#'     the reference-class object. Note that the \code{fscores()} function can be useful here
+#'     to capitalize on the estimation algorithms implemented in \code{mirt}.
+#'     
+#'     For example, a minimal working function would look like the following (note the use of \code{rbind()} to
+#'     append the history terms in the \code{person} object):
+#'     
+#'     \preformatted{
+#'        myfun <- function(design, person, test){
+#'            tmp <- fscores(test@mo, response.pattern = person$responses)
+#'            person$thetas <- matrix(tmp[,'F1'], 1L)
+#'            person$thetas_SE_history <- rbind(person$thetas_SE_history, 
+#'                                              tmp[,'SE_F1', drop=FALSE])
+#'            person$thetas_history <- rbind(person$thetas_history, person$thetas)
+#'            invisible()
+#'         }
+#'     }
+#'   
+#'   }
+#'   
 #'   \item{\code{customNextItem}}{a more advanced function of the form 
 #'     \code{customNextItem <- function(design, person, test)} to use a customized item selection
 #'     method. This requires more complex programming and understanding of \code{mirtCAT}s internal elements,
@@ -320,7 +346,7 @@
 #'     various internal elements from the required functional arguments
 #'   }
 #'   
-#'   \item{\code{constr_fun}}{a user-defined function of the form \code{function(person, test, design)} 
+#'   \item{\code{constr_fun}}{a user-defined function of the form \code{function(design, person, test)} 
 #'     that returns a \code{data.frame} containing the left hand side, relationship, and right hand side
 #'     of the constraints for \code{\link{lp}}. 
 #'     Each row corresponds to a constraint, while the number of columns should be 
@@ -331,7 +357,7 @@
 #'     the constraint that exactly 10 items 
 #'     should be administered to all participants, and that items 1 and 2 should not 
 #'     be included in the same test. The input would then be defined as 
-#'     \preformatted{const_fun <- function(person, test, design){
+#'     \preformatted{const_fun <- function(design, person, test){
 #'        nitems <- extract.mirt(test@@mo, 'nitems')
 #'        lhs <- matrix(0, 2, nitems)
 #'        lhs[1, ] <- 1
@@ -393,8 +419,9 @@
 #'     
 #'     \preformatted{ 
 #'          list(h1('Welcome to the mirtCAT interface'),
-#'               The following interface was created using the mirtCAT package. 
-#'               To cite the package use citation(\\'mirtCATd\\') in R.')
+#'               sprintf('The following interface was created using the mirtCAT package v%s. 
+#'               To cite the package use citation(\\'mirtCAT\\') in R.', 
+#'                  packageVersion("mirtCAT")))
 #'          }
 #'          
 #'      If an empty list is passed, this page will be skipped.
@@ -426,10 +453,6 @@
 #'   \item{\code{stem_default_format}}{\code{shiny} function used for the stems of the items. Default uses the 
 #'     \code{\link{p}} wrapper. To change this to \code{\link{h5}}, for example, 
 #'     pass \code{stem_default_format = shiny::h5} to the \code{shinyGUI} list}
-#'     
-#'   \item{\code{max_time}}{maximum time allowed for the generated GUI, measured
-#'     in seconds. For instance, if the test should stop after 10 minutes then the number 
-#'     600 should be passed (10 * 60). Default is \code{Inf}, therefore no time limit}
 #'     
 #'   \item{\code{temp_file}}{a character vector indicating where a temporary .rds file 
 #'     containing the response information should be saved while the GUI is running. 
@@ -505,8 +528,8 @@
 #'     \item{\code{criteria}}{selection criteria (see above). Default is 'random'}
 #'     
 #'     \item{\code{method}}{estimation criteria (see above). It is generally recommended to 
-#'       select a method which can deal with all-or-none response patterns, such as 'EAP'
-#'       or 'MAP', or in the multidimensional case 'DPrule' or 'TPrule'. Default is 'MAP'}
+#'       select a method which can deal with all-or-none response patterns, such as 'EAP',
+#'       'MAP', or 'WLE'. Default is 'MAP'}
 #'       
 #'     \item{\code{response_variance}}{logical; terminate the preCAT stage when there is variability in the 
 #'       response pattern (i.e., when maximum-likelihood estimation contains a potential optimum)?
@@ -521,7 +544,7 @@
 #' @author Phil Chalmers \email{rphilip.chalmers@@gmail.com}
 #' 
 #' @seealso \code{\link{generate_pattern}}, \code{\link{generate.mirt_object}}, 
-#'   \code{\link{extract.mirtCAT}}, \code{\link{findNextItem}}
+#'   \code{\link{extract.mirtCAT}}, \code{\link{findNextItem}}, \code{\link{computeCriteria}}
 #' 
 #' @return Returns a list object of class \code{'Person'} containing the following elements:
 #'   
@@ -706,6 +729,7 @@ mirtCAT <- function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq',
     if(is.null(local_pattern)){
         runApp(createShinyGUI(ui=.MCE$shinyGUI$ui), launch.browser=TRUE, ...)
         person <- .MCE$person
+        GUI <- TRUE
     } else {
         if(length(AnswerFuns)) 
             stop('AnswerFuns cannot be used for off-line runs', call.=FALSE)
@@ -720,7 +744,9 @@ mirtCAT <- function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq',
             for(i in 1L:length(person))
                 person[[i]]$true_thetas <- local_Thetas[i, ]
         }
+        GUI <- FALSE
     }
-    ret <- mirtCAT_post_internal(person=person, design=.MCE$design)
+    ret <- mirtCAT_post_internal(person=person, design=.MCE$design, 
+                                 has_answers=.MCE$test@has_answers, GUI=GUI)
     return(ret)
 }

@@ -35,13 +35,44 @@ Design <- setClass(Class = "Design",
                              customNextItem = 'function',
                              test_properties = 'data.frame',
                              person_properties = 'data.frame',
-                             constr_fun = 'function'),
+                             Update.thetas = 'function',
+                             constr_fun = 'function',
+                             stage = 'integer'),
                    validity = function(object) return(TRUE)
 )
 
 setMethod("initialize", signature(.Object = "Design"),
           function(.Object, method, criteria, nfact, design,
-                   start_item, preCAT, nitems, max_time){
+                   start_item, preCAT, nitems){
+              Update_thetas <- function(design, person, test){
+                  responses2 <- person$responses
+                  responses2[design@items_not_scored] <- NA
+                  if(person$score){
+                      method <- design@method
+                      if(last_item(person$items_answered) %in% design@items_not_scored)
+                          method <- 'fixed'
+                      if(method == 'ML')
+                          if(length(unique(na.omit(responses2))) < 2L) 
+                              method <- 'MAP'
+                      if(method != 'fixed'){
+                          suppressWarnings(tmp <- fscores(test@mo, method=method, response.pattern=responses2,
+                                                          theta_lim=test@fscores_args$theta_lim,
+                                                          MI = test@fscores_args$MI, quadpts = test@quadpts, 
+                                                          mean = test@fscores_args$mean, cov = test@fscores_args$cov,
+                                                          QMC=test@fscores_args$QMC, 
+                                                          custom_den=test@fscores_args$custom_den))
+                          person$thetas <- tmp[,paste0('F', 1L:test@nfact), drop=FALSE]
+                          person$thetas_SE_history <- rbind(person$thetas_SE_history, 
+                                                      tmp[,paste0('SE_F', 1L:test@nfact), drop=FALSE])
+                          } else {
+                              person$thetas_SE_history <- rbind(person$thetas_SE_history, 
+                                                                person$thetas_SE_history[nrow(person$thetas_SE_history),])
+                          }
+                  }
+                  person$thetas_history <- rbind(person$thetas_history, person$thetas)
+                  invisible()
+              }
+              
               .Object@method <- method
               .Object@criteria <- criteria
               .Object@criteria_estimator <- 'MAP'
@@ -66,16 +97,16 @@ setMethod("initialize", signature(.Object = "Design"),
               .Object@met_SEM <- rep(FALSE, nfact)
               .Object@met_delta_thetas <- rep(FALSE, nfact)
               .Object@met_classify <- rep(FALSE, nfact)
-              .Object@weights <- rep(1/nfact, nfact)
+              .Object@weights <- rep(1, nfact)
               .Object@min_items <- 1L
               .Object@max_items <- nitems
+              .Object@max_time <- Inf
               .Object@stop_now <- FALSE
               .Object@delta_thetas <- rep(0, nfact)
               .Object@preCAT_min_items <- 0L
               .Object@preCAT_max_items <- 0L
               .Object@preCAT_response_var <- FALSE
               .Object@KL_delta <- 0.1
-              .Object@max_time <- if(is.null(max_time)) Inf else max_time
               .Object@use_content <- FALSE
               .Object@content_prop_empirical <- 1
               .Object@classify <- NaN
@@ -86,12 +117,15 @@ setMethod("initialize", signature(.Object = "Design"),
               .Object@items_not_scored <- integer(0L)
               .Object@test_properties <- data.frame()
               .Object@person_properties <- data.frame()
+              .Object@Update.thetas <- Update_thetas
+              .Object@stage <- 2L
               if(length(design)){
                   dnames <- names(design)
-                  gnames <- c('min_SEM', 'thetas.start', 'min_items', 'max_items', 'quadpts', 
+                  gnames <- c('min_SEM', 'thetas.start', 'min_items', 'max_items', 'quadpts', 'max_time',
                               'theta_range', 'weights', 'KL_delta', 'content', 'content_prop',
                               'classify', 'classify_CI', 'exposure', 'delta_thetas', 'constraints',
-                              'customNextItem', 'test_properties', 'person_properties', 'constr_fun')
+                              'customNextItem', 'test_properties', 'person_properties', 'constr_fun',
+                              'customUpdateThetas')
                   if(!all(dnames %in% gnames))
                       stop('The following inputs to design are invalid: ',
                            paste0(dnames[!(dnames %in% gnames)], ' '), call.=FALSE)
@@ -122,6 +156,10 @@ setMethod("initialize", signature(.Object = "Design"),
                       .Object@classify <- design$classify
                   if(!is.null(design$constr_fun))
                       .Object@constr_fun <- design$constr_fun
+                  if(!is.null(design$max_time))
+                      .Object@max_time <- design$max_time
+                  if(!is.null(design$customUpdateThetas))
+                      .Object@Update.thetas <- design$customUpdateThetas
                   if(!is.null(design$test_properties)){
                       .Object@test_properties <- design$test_properties
                       if(nrow(.Object@test_properties) != nitems)
@@ -186,8 +224,6 @@ setMethod("initialize", signature(.Object = "Design"),
               }
               if(.Object@use_content && criteria == 'seq')
                   stop('content designs are not supported for seq criteria', call.=FALSE)
-              if(!mirt:::closeEnough(sum(.Object@weights)-1, -1e-6, 1e-6))
-                  stop('weights does not sum to 1', call.=FALSE)
               if(length(.Object@min_SEM) != 1L && length(.Object@min_SEM) != nfact)
                   stop('min_SEM criteria is not a suitable length', call.=FALSE)
               if(length(preCAT)){
@@ -216,14 +252,14 @@ setMethod("initialize", signature(.Object = "Design"),
                       stop('preCAT_min_items > preCAT_max_items', call.=FALSE)
                   .Object@criteria <- .Object@preCAT_criteria
                   .Object@method <- .Object@preCAT_method
+                  .Object@stage <- 1L
               }
+              .Object@min_items <- .Object@min_items + .Object@preCAT_min_items
               .Object
           }
 )
 
 setGeneric('Update.stop_now', function(.Object, ...) standardGeneric("Update.stop_now"))
-
-setGeneric('Next.stage', function(.Object, ...) standardGeneric("Next.stage"))
 
 setMethod("Update.stop_now", signature(.Object = "Design"),
           function(.Object, person){
@@ -234,41 +270,56 @@ setMethod("Update.stop_now", signature(.Object = "Design"),
                       if(!is.nan(.Object@classify[1L])){
                           z <- -abs(person$thetas - .Object@classify) / diff
                           .Object@met_classify <- as.vector(z < qnorm(.Object@classify_alpha))
-                          if(all(.Object@met_classify)) .Object@stop_now <- TRUE
+                          if(.Object@stage > 1L && all(.Object@met_classify)) 
+                              .Object@stop_now <- TRUE
                       } else {
                           .Object@met_SEM <- diff < .Object@min_SEM
-                          if(!any(is.nan(diff)) && all(.Object@met_SEM)) .Object@stop_now <- TRUE
+                          if(.Object@stage > 1L && !any(is.nan(diff)) && all(.Object@met_SEM)) 
+                              .Object@stop_now <- TRUE
                       }
                       diff2 <- abs(person$thetas_history[nrow(person$thetas_history),] - 
                                        person$thetas_history[nrow(person$thetas_history)-1L,])
                       .Object@met_delta_thetas <- as.vector(diff2 < .Object@delta_thetas)
-                      if(all(.Object@met_delta_thetas)) .Object@stop_now <- TRUE
+                      if(.Object@stage > 1L && all(.Object@met_delta_thetas)) 
+                          .Object@stop_now <- TRUE
                   }
               }
-              if(nanswered == .Object@max_items) .Object@stop_now <- TRUE
+              if(.Object@stage > 1L && nanswered == .Object@max_items) 
+                  .Object@stop_now <- TRUE
               if(.Object@max_time <= sum(person$item_time)) .Object@stop_now <- TRUE
               .Object
           }
 )
 
+setGeneric('Next.stage', function(.Object, ...) standardGeneric("Next.stage"))
+
 setMethod("Next.stage", signature(.Object = "Design"),
           function(.Object, person, test, item){
-              if(item >= .Object@preCAT_min_items){
-                  if(.Object@preCAT_response_var){
-                      suppressWarnings(tmp <- try(fscores(test@mo, method='ML', 
-                                                          response.pattern=person$responses), 
-                                                  silent=TRUE))
-                      if(all(is.finite(na.omit(tmp[1L, ])))){
+              if(.Object@stage < 2L){
+                  if(item >= .Object@preCAT_min_items){
+                      if(.Object@preCAT_response_var){
+                          suppressWarnings(tmp <- try(fscores(test@mo, method='ML', 
+                                                              response.pattern=person$responses), 
+                                                      silent=TRUE))
+                          if(all(is.finite(na.omit(tmp[1L, ])))){
+                              .Object@criteria <- .Object@CAT_criteria
+                              .Object@method <- .Object@CAT_method
+                              .Object@min_items <- .Object@min_items + item
+                              .Object@max_items <- min(c(.Object@max_items + item, test@length))
+                              .Object@stage <- 2L
+                              return(.Object)
+                          }
+                      }
+                      if(item == .Object@preCAT_max_items){
                           .Object@criteria <- .Object@CAT_criteria
                           .Object@method <- .Object@CAT_method
+                          .Object@min_items <- .Object@min_items + item
+                          .Object@max_items <- min(c(.Object@max_items + item, test@length))
+                          .Object@stage <- 2L
+                          return(.Object)
                       }
                   }
-                  if(item == .Object@preCAT_max_items){
-                      .Object@criteria <- .Object@CAT_criteria
-                      .Object@method <- .Object@CAT_method
-                  }
-              }
-              .Object
-          }
-          
+            }
+        .Object
+        }
 )

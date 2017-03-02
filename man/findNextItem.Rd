@@ -80,9 +80,8 @@ CATdesign <- updateDesign(CATdesign, items = c(1, 10), responses = c(1, 1), Thet
 findNextItem(CATdesign)
 findNextItem(CATdesign, all_index = TRUE) # all items rank in terms of most optimal
 
-# alternatively, update the Theta using the internal ReferenceClass method
-Person$help('Update.thetas') # internal help file for class 'Person'
-CATdesign$person$Update.thetas(CATdesign$design, CATdesign$test) 
+# alternatively, update the Theta using the Update.thetas definition in design
+CATdesign$design@Update.thetas(CATdesign$design, CATdesign$person, CATdesign$test) 
 findNextItem(CATdesign)
 
 
@@ -96,7 +95,7 @@ findNextItem(CATdesign)
 #  x5 + x6 == 1               ### item 5 or 6 must be included, but not both
 
 # constraint function
-constr_fun <- function(person, test, design){
+constr_fun <- function(design, person, test){
 
   # left hand side constrains 
   #    - 1 row per constraint, and ncol must equal number of items
@@ -129,10 +128,10 @@ objective <- computeCriteria(CATdesign, criteria = 'MI')
 findNextItem(CATdesign, objective=objective)
 
 # all the items which solve the problem
-findNextItemp(CATdesign, objective=objective, all_index = TRUE)
+findNextItem(CATdesign, objective=objective, all_index = TRUE)
 
 ## within a customNextItem() definition the above code would look like
-# customNextItem <- function(person, design, test){
+# customNextItem <- function(design, person, test){
 #   objective <- computeCriteria(person=person, design=design, test=test, 
 #                                criteria = 'MI') 
 #   item <- findNextItem(person=person, design=design, test=test,
@@ -142,13 +141,12 @@ findNextItemp(CATdesign, objective=objective, all_index = TRUE)
 
 }
 }
-\author{
-Phil Chalmers \email{rphilip.chalmers@gmail.com}
-}
 \references{
 van der Linden, W. J. (2005). Linear models for optimal test design. Springer.
 }
 \seealso{
 \code{\link{mirtCAT}}, \code{\link{updateDesign}}, \code{\link{extract.mirtCAT}}
 }
-
+\author{
+Phil Chalmers \email{rphilip.chalmers@gmail.com}
+}
