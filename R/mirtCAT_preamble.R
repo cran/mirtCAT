@@ -56,7 +56,7 @@ mirtCAT_preamble_internal <-
             names(questions) <- Names
             K <- mo@Data$K
             item_options <- vector('list', length(K))
-            for(i in 1L:length(K))
+            for(i in seq_len(length(K)))
                 item_options[[i]] <- 0L:(K[i]-1L)
             df <- list()
             item_answers <- NULL
@@ -75,12 +75,13 @@ mirtCAT_preamble_internal <-
                 stop('data.frame requires characters instead of factors. 
                         To avoid, use stringsAsFactors = FALSE in your data.frame',
                         call.=FALSE)
+            nitems <- nrow(df)
             StemExpression <- if(is.null(df$StemExpression)) logical(length(df$Type))
             else as.logical(df$StemExpression)
             stem_expressions <- rep(NA, length(df$Type))
             stem_expressions[StemExpression] <- df$Question[StemExpression]
             df <- lapply(df, as.character)
-            for(i in 1L:length(df$Type))
+            for(i in seq_len(length(df$Type)))
                 if(StemExpression[i]) df$Question[i] <- ''
             df$Rendered_Question <- lapply(df$Question, function(x, fun) shiny::withMathJax(fun(x)),
                                   fun=shinyGUI$stem_default_format)
@@ -88,7 +89,15 @@ mirtCAT_preamble_internal <-
                 pick <- df$Type %in% names(customTypes)
                 df$Rendered_Question[pick] <- ''
             }
-            obj <- buildShinyElements(df, itemnames = Names, customTypes=customTypes)
+            if(is.null(shinyGUI$choiceNames))
+                shinyGUI$choiceNames <- shinyGUI$choiceValues <- vector('list', nitems)
+            if(length(shinyGUI$choiceNames) != nitems)
+                stop('choiceNames input is not the correct length', call.=FALSE)
+            if(length(shinyGUI$choiceValues) != nitems)
+                stop('choiceValues input is not the correct length', call.=FALSE)
+            obj <- buildShinyElements(df, itemnames = Names, customTypes=customTypes,
+                                      choiceNames=shinyGUI$choiceNames, 
+                                      choiceValues=shinyGUI$choiceValues)
             questions <- obj$questions
             item_answers <- obj$item_answers
             item_options <- obj$item_options
@@ -132,12 +141,21 @@ mirtCAT_preamble_internal <-
         person_object <- Person$new(nfact=test_object@nfact, nitems=length(test_object@itemnames), 
                                     thetas.start_in=design$thetas.start, score=score, 
                                     theta_SEs=sqrt(diag(test_object@gp$gcov)))
+        if(!is.null(local_pattern)){
+            design_object@start_item <- rep(design_object@start_item, nrow(local_pattern))
+            if(length(start_item) == 1L)
+                start_item <- rep(start_item, nrow(local_pattern))
+            stopifnot(length(start_item) == nrow(local_pattern))
+        }
         if(is.character(start_item)){
             tmp <- design_object@criteria
-            design_object@criteria <- start_item
-            start_item <- findNextCATItem(person=person_object, test=test_object, 
-                                          design=design_object, start=FALSE)
-            design_object@start_item <- start_item
+            tmp2 <- integer(length(design_object@start_item))
+            for(i in seq_len(length(design_object@start_item))){
+                design_object@criteria <- start_item[i]
+                tmp2[i] <- findNextCATItem(person=person_object, test=test_object, 
+                                          design=design_object, start=FALSE) 
+            }
+            design_object@start_item <- tmp2
             design_object@criteria <- tmp
         }
         .MCE$resume_file <- FALSE
@@ -177,7 +195,7 @@ mirtCAT_preamble_internal <-
 mirtCAT_post_internal <- function(person, design, has_answers = FALSE, GUI = FALSE){
     if(!is.list(person)) person <- list(person)
     ret.out <- vector('list', length(person))
-    for(i in 1L:length(person)){
+    for(i in seq_len(length(person))){
         person[[i]]$items_answered <- person[[i]]$items_answered[!is.na(person[[i]]$items_answered)]
         ret <- list(login_name=person[[i]]$login_name,
                     raw_responses=person[[i]]$raw_responses,

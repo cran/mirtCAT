@@ -1,3 +1,18 @@
+# mirtCAT 1.5
+
+- new `choiceNames` and `choiceValues` inputs to `shinyGUI` list to allow HTML stems for radio buttons and checkboxes
+  (e.g., see the new arguments in `help(radioButtons)`)
+
+- rotate x-axis 90 degrees in `plot()` generic by default
+
+- `start_item` can now be a vector to change the starting item for each off-line response pattern input in Monte 
+  Carlo simulations
+
+- fixed off-line starting item when set to `'random'`, which previously set each participant's start item the same 
+  (reported by Okan Bulut)
+
+- internal updating function for `person` class to avoid direct assignment in `customUpdateThetas()` function
+
 # mirtCAT 1.4
 
 - warning message and slot included in GUI results when session terminated unexpectedly

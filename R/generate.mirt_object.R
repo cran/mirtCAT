@@ -1,30 +1,30 @@
 #' Generate a mirt object from population parameters
 #' 
-#' This function generate a \code{mirt} object from known population parameters, which is  
-#' then passed to \code{\link{mirtCAT}} function for running CAT applications.
+#' This function generates a \code{mirt} object from known population parameters, which is  
+#' then passed to \code{\link{mirtCAT}} for running CAT applications.
 #' 
 #' @param parameters a matrix or data.frame of parameters corresponding to the model definitions
 #'   listed in \code{\link{mirt}}. Each row represents a unique item, while the 
 #'   column names correspond to the respective parameter names. If a parameter is not relevant
 #'   for a particular item/row then use \code{NA}'s as placeholders
 #'   
-#' @param itemtype a character vector indicating the type of item to which the parameters 
+#' @param itemtype a character vector indicating the type of item with which the parameters 
 #'   refer. See the \code{itemtype} argument in \code{\link{mirt}}. Note that this input 
 #'   is only used to determine the relevant item class for the rows in \code{parameters}, 
-#'   therefore many inputs are interchangeable (e.g., '2PL' generates the same model as '3PL').
+#'   therefore many inputs are interchangeable (e.g., '2PL' generates the same internal model object as '3PL').
 #'   If only a single value is provided then all items types will be assumed identical
 #'   
 #' @param latent_means (optional) a numeric vector used to define the population latent mean
-#'   structure. By default the mean structure is centered at a 0 centroid
+#'   structure. By default the mean structure is centered at a 0 vector
 #' 
-#' @param latent_covariance (optional) a covariance matrix used to define the population 
+#' @param latent_covariance (optional) a matrix used to define the population 
 #'   variance-covariance structure between the latent traits. By default the relationship is 
-#'   assumed to be standard normal (i.e., and identity matrix)
+#'   assumed to be orthogonal standard normal (i.e., an identity matrix)
 #'   
 #' @param key scoring key required for nested-logit models. See \code{\link{mirt}} for details
 #' 
 #' @param min_category the value representing the lowest category index. By default this is 0,
-#'   therefore the respond suitable for the first category is 0, second is 1, and so on up to 
+#'   therefore the response suitable for the first category is 0, second is 1, and so on up to 
 #'   \code{K - 1}
 #' 
 #' @export generate.mirt_object
@@ -91,7 +91,7 @@ generate.mirt_object <- function(parameters, itemtype, latent_means = NULL,
     itemtype[itemtype %in% c('3PL', '3PLu', '4PL')] <- '2PL'
     itemtype[itemtype %in% c('3PLNRM', '3PLuNRM', '4PLNRM')] <- '2PLNRM'
     itemtype[itemtype == 'PC3PL'] <- 'PC2PL'
-    for(i in 1L:nitems){
+    for(i in seq_len(nitems)){
         pick <- parameters[i, !is.na(parameters[i,]), drop=FALSE]
         nms <- colnames(pick)
         if(itemtype[i] == 'Rasch'){
@@ -112,15 +112,15 @@ generate.mirt_object <- function(parameters, itemtype, latent_means = NULL,
     tmp[is.na(tmp)] <- 0
     parameters[, paste0('a', 1:nfact)] <- tmp
     model <- character(nfact)
-    for(i in 1L:nfact)
+    for(i in seq_len(nfact))
         model[i] <- paste0('F', i, ' = 1-', ncol(dat))
     model <- mirt.model(paste0(model, collapse = '\n'))
     sv <- mirt(dat, model, itemtype=itemtype, key=key, technical=list(customK=K), pars='values')
-    for(i in 1L:nitems){
+    for(i in seq_len(nitems)){
         pick <- parameters[i, !is.na(parameters[i,]), drop=FALSE]
         nms <- colnames(pick)
         wch <- which(sv$item == dnames[i])
-        for(j in 1L:ncol(pick)){
+        for(j in seq_len(ncol(pick))){
             wch2 <- which(sv[wch, ]$name == nms[j])
             sv[wch[wch2], ]$value <- pick[,j]
         }

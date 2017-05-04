@@ -20,7 +20,7 @@ mirtCAT(df = NULL, mo = NULL, method = "MAP", criteria = "seq",
 \method{plot}{mirtCAT}(x, pick_theta = NULL, true_thetas = TRUE, SE = 1,
   main = NULL, par.strip.text = list(cex = 0.7),
   par.settings = list(strip.background = list(col = "#9ECAE1"), strip.border =
-  list(col = "black")), ...)
+  list(col = "black")), scales = list(x = list(rot = 90)), ...)
 }
 \arguments{
 \item{df}{a \code{data.frame} containing the \code{character} vector inputs required to generate 
@@ -140,10 +140,12 @@ sufficient response variability is present. Default is 'MAP'}
   items sequentially.}
 
 \item{start_item}{two possible inputs to determine the starting item are available. 
-Passing a single number will indicate the specific item to be used as the start item;
+Passing a number will indicate the specific item to be used as the start item;
 default is 1, which selects the first item in the defined test/survey. 
 If a character string is passed then the item will be selected from one of 
-the item selections criteria available (see the \code{criteria} argument)}
+the item selections criteria available (see the \code{criteria} argument). For off-line 
+runs where a \code{local_pattern} input is used then a vector of numbers/characters
+may be supplied and will be associated with each row response vector}
 
 \item{local_pattern}{a character/numeric matrix of response patterns 
 used to run the CAT application without generating the GUI interface. 
@@ -317,8 +319,9 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
     \code{customNextItem}. 
     The latent trait terms are updated directly in the \code{person} object, which is a 
     \code{\link{ReferenceClasses}} type, and therefore direct assignment to the object will modify the internal
-    elements. The function should return \code{invisible()} as well, because the purpose is only to update 
-    the reference-class object. Note that the \code{fscores()} function can be useful here
+    elements. Hence, to avoid manual modification users can pass the latent trait estimates and their 
+    respective standard errors to the associated \code{person$Update_thetas(theta, theta_SE)} function.
+    Note that the \code{fscores()} function can be useful here
     to capitalize on the estimation algorithms implemented in \code{mirt}.
     
     For example, a minimal working function would look like the following (note the use of \code{rbind()} to
@@ -326,11 +329,11 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
     
     \preformatted{
        myfun <- function(design, person, test){
-           tmp <- fscores(test@mo, response.pattern = person$responses)
-           person$thetas <- matrix(tmp[,'F1'], 1L)
-           person$thetas_SE_history <- rbind(person$thetas_SE_history, 
-                                             tmp[,'SE_F1', drop=FALSE])
-           person$thetas_history <- rbind(person$thetas_history, person$thetas)
+           mo <- extract.mirtCAT(test, 'mo')
+           responses <- extract.mirtCAT(person, 'responses')
+           tmp <- fscores(mo, response.pattern = responses)
+           person$Update_thetas(tmp[,'F1'],
+                                tmp[,'SE_F1', drop=FALSE])
            invisible()
         }
     }
@@ -490,6 +493,14 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
    \item{\code{forced_choice}}{logical; require a response to each item? Default is \code{TRUE}.
      This should only be set to \code{FALSE} for surveys (not CATs)}
      
+   \item{\code{choiceNames}}{a list containing the \code{choiceNames} input for each respective item when
+     the input is 'radio' or 'checkbox' (see \code{\link{radioButtons}}). 
+     This is used to modify the output of the controllers using 
+     suitable HTML code. If a row in \code{df} should not have a customized names then supplying 
+     the value \code{NA} in the associated list element will use the standard inputs instead}
+     
+   \item{\code{choiceValues}}{associated values to be used along with \code{choiceNames} (see above)}
+     
    \item{\code{time_before_answer}}{a numeric value representing the number of seconds that must have elapsed
      when \code{forced_choice = FALSE} before a response can be provided or skipped. This is used 
      to control accidental skips over items when responses are not forced. Default is 1, indicating
@@ -570,6 +581,8 @@ standard error. To obtain the 95\% interval use \code{SE = 1.96} (from the z-dis
 \item{par.strip.text}{plotting argument passed to \code{\link{lattice}}}
 
 \item{par.settings}{plotting argument passed to \code{\link{lattice}}}
+
+\item{scales}{plotting argument passed to \code{\link{lattice}}}
 }
 \value{
 Returns a list object of class \code{'Person'} containing the following elements:

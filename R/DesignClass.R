@@ -61,15 +61,13 @@ setMethod("initialize", signature(.Object = "Design"),
                                                           mean = test@fscores_args$mean, cov = test@fscores_args$cov,
                                                           QMC=test@fscores_args$QMC, 
                                                           custom_den=test@fscores_args$custom_den))
-                          person$thetas <- tmp[,paste0('F', 1L:test@nfact), drop=FALSE]
-                          person$thetas_SE_history <- rbind(person$thetas_SE_history, 
-                                                      tmp[,paste0('SE_F', 1L:test@nfact), drop=FALSE])
+                          person$Update_thetas(tmp[,paste0('F', 1L:test@nfact), drop=FALSE],
+                                               tmp[,paste0('SE_F', 1L:test@nfact), drop=FALSE])
                           } else {
-                              person$thetas_SE_history <- rbind(person$thetas_SE_history, 
-                                                                person$thetas_SE_history[nrow(person$thetas_SE_history),])
+                              person$Update_thetas(person$thetas,
+                                                   person$thetas_SE_history[nrow(person$thetas_SE_history),])
                           }
                   }
-                  person$thetas_history <- rbind(person$thetas_history, person$thetas)
                   invisible()
               }
               
@@ -208,13 +206,16 @@ setMethod("initialize", signature(.Object = "Design"),
                       nms[nms == 'unordered'] <- 'ordered'
                       names(design$constraints) <- nms
                       .Object@constraints <- design$constraints
-                      pick <- sapply(design$constraints, 
-                                     function(x, start_item) any(x == start_item),
-                                     start_item=start_item)
-                      if((any(pick) && names(pick)[pick]) == 'independent')
-                        stop('The first item can not be used in an \'independent\' constraint. 
+                      for(i in seq_len(length(start_item))){
+                          if(is.nan(start_item[i])) next
+                          pick <- sapply(design$constraints, 
+                                         function(x, si) any(x == si),
+                                         si=start_item[i])
+                          if(any(pick) && names(pick)[pick] == 'independent')
+                              stop('The first item can not be used in an \'independent\' constraint. 
                               Consider removing the items that will not be used from the test.', 
-                             call.=FALSE)
+                                   call.=FALSE)
+                      }
                   }
                   if(!is.null(design$customNextItem)){
                       .Object@customNextItem <- design$customNextItem

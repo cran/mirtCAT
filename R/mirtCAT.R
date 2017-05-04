@@ -134,10 +134,12 @@
 #'   items sequentially.
 #'   
 #' @param start_item two possible inputs to determine the starting item are available. 
-#'   Passing a single number will indicate the specific item to be used as the start item;
+#'   Passing a number will indicate the specific item to be used as the start item;
 #'   default is 1, which selects the first item in the defined test/survey. 
 #'   If a character string is passed then the item will be selected from one of 
-#'   the item selections criteria available (see the \code{criteria} argument)
+#'   the item selections criteria available (see the \code{criteria} argument). For off-line 
+#'   runs where a \code{local_pattern} input is used then a vector of numbers/characters
+#'   may be supplied and will be associated with each row response vector
 #'   
 #' @param local_pattern a character/numeric matrix of response patterns 
 #'   used to run the CAT application without generating the GUI interface. 
@@ -311,8 +313,9 @@
 #'     \code{customNextItem}. 
 #'     The latent trait terms are updated directly in the \code{person} object, which is a 
 #'     \code{\link{ReferenceClasses}} type, and therefore direct assignment to the object will modify the internal
-#'     elements. The function should return \code{invisible()} as well, because the purpose is only to update 
-#'     the reference-class object. Note that the \code{fscores()} function can be useful here
+#'     elements. Hence, to avoid manual modification users can pass the latent trait estimates and their 
+#'     respective standard errors to the associated \code{person$Update_thetas(theta, theta_SE)} function.
+#'     Note that the \code{fscores()} function can be useful here
 #'     to capitalize on the estimation algorithms implemented in \code{mirt}.
 #'     
 #'     For example, a minimal working function would look like the following (note the use of \code{rbind()} to
@@ -320,11 +323,11 @@
 #'     
 #'     \preformatted{
 #'        myfun <- function(design, person, test){
-#'            tmp <- fscores(test@mo, response.pattern = person$responses)
-#'            person$thetas <- matrix(tmp[,'F1'], 1L)
-#'            person$thetas_SE_history <- rbind(person$thetas_SE_history, 
-#'                                              tmp[,'SE_F1', drop=FALSE])
-#'            person$thetas_history <- rbind(person$thetas_history, person$thetas)
+#'            mo <- extract.mirtCAT(test, 'mo')
+#'            responses <- extract.mirtCAT(person, 'responses')
+#'            tmp <- fscores(mo, response.pattern = responses)
+#'            person$Update_thetas(tmp[,'F1'],
+#'                                 tmp[,'SE_F1', drop=FALSE])
 #'            invisible()
 #'         }
 #'     }
@@ -483,6 +486,14 @@
 #'      
 #'    \item{\code{forced_choice}}{logical; require a response to each item? Default is \code{TRUE}.
 #'      This should only be set to \code{FALSE} for surveys (not CATs)}
+#'      
+#'    \item{\code{choiceNames}}{a list containing the \code{choiceNames} input for each respective item when
+#'      the input is 'radio' or 'checkbox' (see \code{\link{radioButtons}}). 
+#'      This is used to modify the output of the controllers using 
+#'      suitable HTML code. If a row in \code{df} should not have a customized names then supplying 
+#'      the value \code{NA} in the associated list element will use the standard inputs instead}
+#'      
+#'    \item{\code{choiceValues}}{associated values to be used along with \code{choiceNames} (see above)}
 #'      
 #'    \item{\code{time_before_answer}}{a numeric value representing the number of seconds that must have elapsed
 #'      when \code{forced_choice = FALSE} before a response can be provided or skipped. This is used 
@@ -741,7 +752,7 @@ mirtCAT <- function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq',
             local_Thetas <- attr(local_pattern, 'Theta')
             if(length(person) == 1L) 
                 local_Thetas <- matrix(as.numeric(local_Thetas), nrow=1L)
-            for(i in 1L:length(person))
+            for(i in seq_len(length(person)))
                 person[[i]]$true_thetas <- local_Thetas[i, ]
         }
         GUI <- FALSE

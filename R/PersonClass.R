@@ -55,11 +55,18 @@ Person$methods(
             infos <- lapply(pick, function(x, thetas)
                 FI(extract.item(test@mo, x), Theta=thetas), thetas=thetas)
             tmp <- matrix(0, nrow(infos[[1L]]), ncol(infos[[1L]]))
-            for(i in 1L:length(infos))
+            for(i in seq_len(length(infos)))
                 tmp <- tmp + infos[[i]]
             if(design@criteria %in% c('DPrule', 'TPrule', 'EPrule', 'WPrule', 'APrule'))
                 tmp <- tmp + solve(test@gp$gcov)
             info_thetas <<- tmp
         }
-    }   
+    },
+    
+    Update_thetas = function(theta, theta_SE){
+        if(!is.matrix(theta)) theta <- matrix(theta, 1L)
+        thetas <<- theta
+        thetas_SE_history <<- rbind(thetas_SE_history, theta_SE)
+        thetas_history <<- rbind(thetas_history, thetas)
+    }
 )
