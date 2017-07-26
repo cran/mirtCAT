@@ -22,9 +22,13 @@
 #' 
 #' @references 
 #' 
+#' Chalmers, R., P. (2012). mirt: A Multidimensional Item Response Theory
+#' Package for the R Environment. \emph{Journal of Statistical Software, 48}(6), 1-29.
+#' \doi{10.18637/jss.v048.i06}
+#' 
 #' Chalmers, R. P. (2016). Generating Adaptive and Non-Adaptive Test Interfaces for 
 #' Multidimensional Item Response Theory Applications. \emph{Journal of Statistical Software, 71}(5), 
-#' 1-39. doi:10.18637/jss.v071.i05
+#' 1-39. \doi{10.18637/jss.v071.i05}
 #' 
 #' @examples
 #' \dontrun{
@@ -116,6 +120,8 @@ mirtCAT_preamble_internal <-
                 stop('Only random and seq criteria are available if no mo was defined', call.=FALSE)
             mirt_mins <- rep(0L, ncol(dat))
         } else {
+            if(mo@Options$exploratory) 
+                stop('CATs are intended for confirmatory IRT models not exploratory', call.=FALSE)
             score <- TRUE
             mirt_mins <- mo@Data$mins
         }
@@ -140,7 +146,8 @@ mirtCAT_preamble_internal <-
                              preCAT=preCAT, nitems=test_object@length)
         person_object <- Person$new(nfact=test_object@nfact, nitems=length(test_object@itemnames), 
                                     thetas.start_in=design$thetas.start, score=score, 
-                                    theta_SEs=sqrt(diag(test_object@gp$gcov)))
+                                    theta_SEs=sqrt(diag(test_object@gp$gcov)),
+                                    Info_thetas_cov = solve(test_object@gp$gcov))
         if(!is.null(local_pattern)){
             design_object@start_item <- rep(design_object@start_item, nrow(local_pattern))
             if(length(start_item) == 1L)

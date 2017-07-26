@@ -15,11 +15,12 @@ Person <- setRefClass("Person",
                                     login_name = 'character',
                                     score = 'logical',
                                     true_thetas = 'numeric',
+                                    info_thetas_cov = 'matrix',
                                     terminated_sucessfully = 'logical'),
                       
                       methods = list(
                          initialize = function(nfact, nitems, thetas.start_in, score,
-                                               theta_SEs, CustomUpdateThetas, ID = 0L){
+                                               theta_SEs, CustomUpdateThetas, Info_thetas_cov, ID = 0L){
                              'Initialize the person object given background information'
                              ID <<- ID
                              true_thetas <<- numeric(0L)
@@ -36,6 +37,7 @@ Person <- setRefClass("Person",
                                 thetas <<- matrix(thetas.start_in, nrow=1L)
                              thetas_history <<- matrix(thetas, 1L, nfact)
                              info_thetas <<- matrix(0, nfact, nfact)
+                             info_thetas_cov <<- Info_thetas_cov 
                              terminated_sucessfully <<- FALSE
                          })
                       
@@ -57,8 +59,6 @@ Person$methods(
             tmp <- matrix(0, nrow(infos[[1L]]), ncol(infos[[1L]]))
             for(i in seq_len(length(infos)))
                 tmp <- tmp + infos[[i]]
-            if(design@criteria %in% c('DPrule', 'TPrule', 'EPrule', 'WPrule', 'APrule'))
-                tmp <- tmp + solve(test@gp$gcov)
             info_thetas <<- tmp
         }
     },

@@ -1,5 +1,5 @@
 Package: mirtCAT
-Version: 1.5
+Version: 1.6.1
 Type: Package
 Title: Computerized Adaptive Testing with Multidimensional Item
         Response Theory
@@ -14,10 +14,10 @@ Description: Provides tools to generate an HTML interface for creating adaptive
     for tests which contain a large number of item selection constraints.
     Finally, package contains tools useful for performing Monte Carlo simulations 
     for studying the behavior of computerized adaptive test banks.
-Depends: mirt (>= 1.23), shiny (>= 1.0.1)
+Depends: mirt (>= 1.25), shiny (>= 1.0.1)
 Imports: lattice, stats, Rcpp, methods, markdown, pbapply, lpSolve
 Suggests: shinythemes, parallel, SimDesign, knitr
-ByteCompile: no
+ByteCompile: yes
 LazyLoad: yes
 LazyData: yes
 VignetteBuilder: knitr
@@ -31,6 +31,6 @@ URL: https://github.com/philchalmers/mirtCAT,
 BugReports: https://github.com/philchalmers/mirtCAT/issues?state=open
 RoxygenNote: 6.0.1
 NeedsCompilation: yes
-Packaged: 2017-05-03 22:59:00 UTC; phil
+Packaged: 2017-07-26 18:23:04 UTC; phil
 Author: Phil Chalmers [aut, cre]
-Date/Publication: 2017-05-04 07:17:45 UTC
+Date/Publication: 2017-07-26 21:32:36 UTC

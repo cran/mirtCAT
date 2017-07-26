@@ -1,3 +1,12 @@
+# mirtCAT 1.6
+
+- iterative algorithms now use the previous `theta` estimates as the starting values when locating
+  the updated estimates
+
+- fix selection bug when using prior covariance matrix selection rules (reported by Johan Braeken)
+
+- `computeCriteria()` now respects the `subset` argument (reported by Johan Braeken)
+
 # mirtCAT 1.5
 
 - new `choiceNames` and `choiceValues` inputs to `shinyGUI` list to allow HTML stems for radio buttons and checkboxes

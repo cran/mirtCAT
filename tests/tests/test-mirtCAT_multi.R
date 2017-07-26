@@ -100,7 +100,7 @@ test_that('multidimensional', {
                    design = list(min_SEM = .5), criteria = 'APrule')
     expect_equal(as.numeric(res$thetas), c(0.5543021, 0.8456234), tolerance = 1e-4)
     expect_equal(as.numeric(res$thetas_SE_history[nrow(res$thetas_SE_history),]), 
-                 c(0.488113, 0.493311), tolerance = 1e-4)
+                 c(0.4881130, 0.4933111), tolerance = 1e-4)
     
 })
 
