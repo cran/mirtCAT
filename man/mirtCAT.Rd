@@ -17,97 +17,106 @@ mirtCAT(df = NULL, mo = NULL, method = "MAP", criteria = "seq",
 
 \method{summary}{mirtCAT}(object, sort = TRUE, ...)
 
-\method{plot}{mirtCAT}(x, pick_theta = NULL, true_thetas = TRUE, SE = 1,
-  main = NULL, par.strip.text = list(cex = 0.7),
-  par.settings = list(strip.background = list(col = "#9ECAE1"), strip.border =
-  list(col = "black")), scales = list(x = list(rot = 90)), ...)
+\method{plot}{mirtCAT}(x, pick_theta = NULL, true_thetas = TRUE,
+  SE = 1, main = NULL, par.strip.text = list(cex = 0.7),
+  par.settings = list(strip.background = list(col = "#9ECAE1"),
+  strip.border = list(col = "black")), scales = list(x = list(rot = 90)),
+  ...)
 }
 \arguments{
 \item{df}{a \code{data.frame} containing the \code{character} vector inputs required to generate 
-GUI questions through shiny. If \code{factor}s are supplied instead of \code{character} vectors 
-then the inputs will be coerced using the \code{as.character()} function (set 
-\code{stringsAsFactors = FALSE} when defining a \code{data.frame} to avoid this). 
-Each row in the object corresponds to a unique
-item. The object supports the follow column name combinations as inputs to specify the 
-type of response format, questions, options, answers, and stems:
-
-\describe{
-
-  \item{\code{Type}}{Indicates the type of response input 
-    to use from the shiny package. The supported types are: \code{'radio'} for radio buttons 
-    (\code{\link{radioButtons}}), \code{'select'} for a pull-down box for selecting 
-    inputs (\code{\link{selectInput}}), \code{'rankselect'} for a set of pull-down boxes rank-ordering
-    inputs (\code{\link{selectInput}}) associated with each option supplied, 
-    \code{'text'} and \code{'textArea'} for requiring 
-    typed user input (\code{\link{textInput}} and \code{\link{textAreaInput}}), 
-    \code{'checkbox'} for allowing multiple 
-    responses to be checked off (\code{\link{checkboxGroupInput}}),
-    \code{'slider'} for generating slider inputs (\code{\link{sliderInput}}), or
-    \code{'none'} for presenting only an item stem with no selection options. Note that slider
-    inputs require additional arguments to be passed; see \code{...} instructions below).
-    
-    Additionally, if the above types are not sufficient for the desired output then users 
-    can create their own response formats and inputs via the \code{customTypes} list input 
-    (see below). E.g., if a function with the name \code{'MyTableQuestion'} is supplied 
-    to \code{customTypes} then supplying this type to the \code{df} will use this function for
-    the respective item. Note that this is more advanced and requires a working knowledge of shiny's 
-    design, inputs, and specifications. This is generally for advanced users
-    to use on an as-per-needed basis.} 
+  GUI questions through shiny. If \code{factor}s are supplied instead of \code{character} vectors 
+  then the inputs will be coerced using the \code{as.character()} function (set 
+  \code{stringsAsFactors = FALSE} when defining a \code{data.frame} to avoid this). 
+  Each row in the object corresponds to a unique
+  item. The object supports the follow column name combinations as inputs to specify the 
+  type of response format, questions, options, answers, and stems:
   
-  \item{\code{Question}}{A character vector containing all the questions or stems to be generated.
-    Alternatively, when paired with the \code{StemExpression} logical value, 
-    each element may represent a character vector of arbitrary R expressions
-    to be evaluated as suitable item stems. These are rendered into suitable HTML code,
-    typically through shiny \code{\link{tags}}. This approach is much more verbose, however 
-    it provides a great deal of customization, particularly through the use of \code{div()} 
-    and other helpful tags. 
+  \describe{
+  
+    \item{\code{Type}}{Indicates the type of response input 
+      to use from the shiny package. The supported types are: \code{'radio'} for radio buttons 
+      (\code{\link{radioButtons}}), \code{'select'} for a pull-down box for selecting 
+      inputs (\code{\link{selectInput}}), \code{'rankselect'} for a set of pull-down boxes rank-ordering
+      inputs (\code{\link{selectInput}}) associated with each option supplied, 
+      \code{'text'} and \code{'textArea'} for requiring 
+      typed user input (\code{\link{textInput}} and \code{\link{textAreaInput}}), 
+      \code{'checkbox'} for allowing multiple 
+      responses to be checked off (\code{\link{checkboxGroupInput}}),
+      \code{'slider'} for generating slider inputs (\code{\link{sliderInput}}), or
+      \code{'none'} for presenting only an item stem with no selection options. Note that slider
+      inputs require additional arguments to be passed; see \code{...} instructions below).
+      
+      Additionally, if the above types are not sufficient for the desired output then users 
+      can create their own response formats and inputs via the \code{customTypes} list input 
+      (see below). E.g., if a function with the name \code{'MyTableQuestion'} is supplied 
+      to \code{customTypes} then supplying this type to the \code{df} will use this function for
+      the respective item. Note that this is more advanced and requires a working knowledge of shiny's 
+      design, inputs, and specifications. This is generally for advanced users
+      to use on an as-per-needed basis.} 
     
-    E.g., the following would result in two bolded and italicized item stems: 
-    \code{c("tags$b('Stem 1')", "tags$em('Stem 2')")}, along with associated \code{TRUE} values
-    in \code{StemExpression}. The \code{\link{div}} tag allows these expressions to be 
-    stacked too; for example, \code{div(HTML("This is some HTML"), tags$br(), HTML("And in the middle a line break")}.
-    See \code{http://shiny.rstudio.com/articles/tag-glossary.html} for more examples of how
-    to use tags and HTML generating functions.
+    \item{\code{Question}}{A character vector containing all the questions or stems to be generated.
+      By default these character vectors are passed to \code{\link{HTML}}, and therefore allow for 
+      HTML tags to be included directly. For example, the following example defines two stems, 
+      where the second uses an emphasis tag to provide italics.
+      
+      \code{Question = c('This is the first item stem.', 'This is the <em>second</em> item stem.'))}
+      
+      Alternatively, if tag constructor function are preferred these need only be wrapped within
+      a final call to \code{\link{as.character}} to coerce the shiny.tag expressions into suitable
+      character vectors of HTML code. For example, the above could be expressed as 
+
+      \code{Question = c('This is the first item stem.', 
+         as.character(div('This is the', em('second'), 'item stem.')))}
+      
+      Moreover, because this input must be a character vector, the use of \code{\link{sapply}} in 
+      concert with \code{\link{as.character}} can apply this conversion to all elements (often
+      redundantly). Here's an example of this format:
+
+      \preformatted{
+                    Question = sapply(list('This is the first item stem.',
+                        div('This is the', em('second'), 'item stem.'),
+                        div('This is the', strong('third'), br(), br(), 'item stem.'),
+                        div('Fourth with some code:', code('obj <- 42'))),
+                    as.character)
+       }
+     }
     
-    } 
-    
-  \item{\code{Option.#}}{Names pertaining to the possible response
-    options for each item, where the # corresponds to the specific category. For
-    instance, a test with 4 unique response options for each item would contain
-    the columns (\code{Option.1}, \code{Option.2}, \code{Option.3}, \code{Option.4}).
-    If, however, some items have fewer categories than others then \code{NA}'s can be used for response
-    options that do not apply.}
-    
-  \item{\code{Answer} or \code{Answer.#}}{(Optional) A character vector (or multiple character
-    vectors) indicating the scoring key for items that have correct answer(s). If there
-    is no correct answer for a question then a value of \code{NA} must be declared.}
-    
-  \item{\code{Stem}}{(Optional) a character vector of absolute or relative paths 
-    pointing external markdown (.md) or HTML (.html) files to be used as item stems. 
-    \code{NA}s are used if the item has no corresponding file.} 
-    
-  \item{\code{StemExpression}}{(Optional) a logical vector indicating which \code{Question}
-    elements should be evaluated first in R. }
-    
-  \item{\code{Timer}}{(Optional) a numeric vector indicating a time limit (in seconds) 
-    for each respective item. If a response is not provided before this limit then the question
-    will automatically advance to the next selected item. The values \code{NA} and \code{Inf}
-    indicate no time limit for the respective items. Note that this option can only be used 
-    when \code{shinyGUI = list(forced_choice = FALSE)}}
-    
-  \item{\code{Mastery}}{(Optional) a logical vector indicating whether the item must be mastered
-    prior to continuing. Naturally, this requires that one or more \code{Answers} are provided,
-    or suitable functions for scoring are supplied}
-    
-  \item{\code{...}}{In cases where \code{'slider'} inputs are used instead only 
-    the \code{Question} input is required along with (at minimum) a 
-    \code{min}, \code{max}, and \code{step} column. In rows where the \code{Type == 'slider'} the 
-    column names will correspond to the input arguments to \code{\link{sliderInput}}. 
-    Other input column options such as \code{step}, \code{round}, \code{pre}, \code{post}, 
-    \code{ticks}, \code{inline}, \code{placeholder}, \code{width}, and \code{size} 
-    are also supported for the respective input types.} 
-    
-}}
+      
+    \item{\code{Option.#}}{Names pertaining to the possible response
+      options for each item, where the # corresponds to the specific category. For
+      instance, a test with 4 unique response options for each item would contain
+      the columns (\code{Option.1}, \code{Option.2}, \code{Option.3}, \code{Option.4}).
+      If, however, some items have fewer categories than others then \code{NA}'s can be used for response
+      options that do not apply.}
+      
+    \item{\code{Answer} or \code{Answer.#}}{(Optional) A character vector (or multiple character
+      vectors) indicating the scoring key for items that have correct answer(s). If there
+      is no correct answer for a question then a value of \code{NA} must be declared.}
+      
+    \item{\code{Stem}}{(Optional) a character vector of absolute or relative paths 
+      pointing external markdown (.md) or HTML (.html) files to be used as item stems. 
+      \code{NA}s are used if the item has no corresponding file.} 
+      
+    \item{\code{Timer}}{(Optional) a numeric vector indicating a time limit (in seconds) 
+      for each respective item. If a response is not provided before this limit then the question
+      will automatically advance to the next selected item. The values \code{NA} and \code{Inf}
+      indicate no time limit for the respective items. Note that this option can only be used 
+      when \code{shinyGUI = list(forced_choice = FALSE)}}
+      
+    \item{\code{Mastery}}{(Optional) a logical vector indicating whether the item must be mastered
+      prior to continuing. Naturally, this requires that one or more \code{Answers} are provided,
+      or suitable functions for scoring are supplied}
+      
+    \item{\code{...}}{In cases where \code{'slider'} inputs are used instead only 
+      the \code{Question} input is required along with (at minimum) a 
+      \code{min}, \code{max}, and \code{step} column. In rows where the \code{Type == 'slider'} the 
+      column names will correspond to the input arguments to \code{\link{sliderInput}}. 
+      Other input column options such as \code{step}, \code{round}, \code{pre}, \code{post}, 
+      \code{ticks}, \code{inline}, \code{placeholder}, \code{width}, and \code{size} 
+      are also supported for the respective input types.} 
+      
+  }}
 
 \item{mo}{single group object defined by the \code{mirt::mirt()} function. This is required
 if the test is to be scored adaptively or non-adaptively, but not required for general 
@@ -289,8 +298,12 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
     be between 0 and 1 (e.g., 0.95 gives 95\% confidence interval)}
     
   \item{\code{exposure}}{a numeric vector specifying the amount of exposure control to apply for
-    each successive item (length must equal the number of items). 
-    The default uses no exposure control. If the item exposure 
+    each successive item (length must equal the number of items). Note that this includes the 
+    first item as well when a selection criteria is specified, therefore if a specific first 
+    item should be used then the first element to \code{exposure} should be 1.  
+    The default uses no exposure control. 
+    
+    If the item exposure 
     is greater than 1 then the \code{n} most optimal
     criteria will be randomly sampled from. For instance, if 
     \code{exposure[5] == 3}, and \code{criteria = 'MI'}, then when the fifth item is to be 
@@ -300,7 +313,7 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
     
     If all elements in \code{exposure} are between 0 and 1 then the Sympson-Hetter exposure 
     control method will be implemented. In this method, an item is administered only if it 
-    passes a probability simulation experiment, otherwise it is removed from the item pool.
+    passes a probability simulation experiment; otherwise, it is removed from the item pool.
     Values closer to 1 are more likely to appear in the test, while value closer to 0 are more
     likely to be randomly discarded.}
     
@@ -478,7 +491,8 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
     the \code{demographics} default}
     
   \item{\code{stem_default_format}}{\code{shiny} function used for the stems of the items. Default uses the 
-    \code{\link{p}} wrapper. To change this to \code{\link{h5}}, for example, 
+    \code{\link{HTML}} wrapper, allowing for HTML tags to be included directly in the character vector 
+    definitions. To change this to something different, like \code{\link{h5}} for example, 
     pass \code{stem_default_format = shiny::h5} to the \code{shinyGUI} list}
     
   \item{\code{temp_file}}{a character vector indicating where a temporary .rds file 
@@ -497,7 +511,7 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
   
     \preformatted{function(person){ 
                     return(list(h5("You have successfully completed the interface. 
-                                   Click the action button to terminate the application.")))
+                                   It is now safe to leave the application.")))
                      } }
    }    
    
@@ -515,7 +529,9 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
      the input is 'radio' or 'checkbox' (see \code{\link{radioButtons}}). 
      This is used to modify the output of the controllers using 
      suitable HTML code. If a row in \code{df} should not have a customized names then supplying 
-     the value \code{NA} in the associated list element will use the standard inputs instead}
+     the value \code{NULL} in the associated list element will use the standard inputs instead. 
+     Alternatively, if specified the names of the elements to this list can be used to match the 
+     rownames of the \code{df} object to avoid the use of \code{NULL} placeholders}
      
    \item{\code{choiceValues}}{associated values to be used along with \code{choiceNames} (see above)}
      
@@ -537,11 +553,12 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
          \code{password = data.frame(user = c('user1', 'user2'), password = rep('1234', 2))}}      
      }
    }
+   
+   \item{\code{time_remaining}}{string to print prior to the length of time remaining in the session. 
+     Default is \code{"Time remaining:"}}
      
-   \item{\code{stopApp}}{logical; use a \code{stopApp()} call after the interface has been completed?
-     Default is \code{TRUE}. However, when hosting an application on a remote server this should be set
-     to \code{FALSE} to allow a more graceful completion (in which case the last page will be displayed
-     until the browser tab is closed)}
+   \item{\code{response_msg}}{string to print when valid responses are required but the users does not provide
+     a valid input. Default is \code{"Please provide a suitable response"}}    
      
    \item{\code{ui}}{a shiny UI function used to define the interface. If \code{NULL}, the 
      default one will be used. See \code{mirtCAT:::default_UI} for the internal code definition}
@@ -741,18 +758,18 @@ summary(res_random)
 summary(res_MI)
 
 #-----------------------------------------
-# HTML tags for better customization
+# HTML tags for better customization, coerced to characters for compatability
 
 # help(tags, package='shiny')
 options <- matrix(c("Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"),
                   nrow = 3, ncol = 5, byrow = TRUE)
-questions <- c("HTML('Building CATs with mirtCAT is difficult.')",
-               "div(HTML('mirtCAT requires a'), br(), HTML('substantial amount of coding.'))",
-               "div(strong('I would use'), HTML('mirtCAT in my research.'))")
-df <- data.frame(Question = questions, 
+shinyStems <- list(HTML('Building CATs with mirtCAT is difficult.'),
+               div(HTML('mirtCAT requires a'), br(), HTML('substantial amount of coding.')),
+               div(strong('I would use'), HTML('mirtCAT in my research.')))
+questions <- sapply(shinyStems, as.character)
+df <- data.frame(Question=questions,
                  Option = options, 
                  Type = "radio",
-                 StemExpression = c(TRUE, TRUE, TRUE),
                  stringsAsFactors=FALSE)
 
 res <- mirtCAT(df)

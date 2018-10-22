@@ -11,6 +11,8 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                     begin_message = 'character',
                                     stem_locations = 'character',
                                     stem_expressions = 'character',
+                                    time_remaining = 'character',
+                                    response_msg = 'character',
                                     demographic_inputIDs = 'character',
                                     temp_file = 'character',
                                     customTypes = 'list',
@@ -23,7 +25,6 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                     time_before_answer = 'numeric',
                                     password='data.frame',
                                     css = 'character',
-                                    stopApp = 'logical',
                                     ui = 'function',
                                     theme = 'character'),
                       
@@ -34,7 +35,6 @@ ShinyGUI <- setRefClass("ShinyGUI",
                               questions <<- questions
                               df <<- df
                               forced_choice <<- TRUE
-                              stopApp <<- TRUE
                               theme <<- ''
                               Timer <- as.numeric(Timer)
                               timer <<- ifelse(is.finite(Timer), Timer, as.numeric(NA))
@@ -75,6 +75,8 @@ ShinyGUI <- setRefClass("ShinyGUI",
                               author <<- 'Author information'
                               instructions <<- c("To progress through the interface, click on the action button below.",
                                                  "Next")
+                              time_remaining <<- "Time remaining: "
+                              response_msg <<- "Please provide a suitable response"
                               demographic_inputIDs <<- character(0)
                               if(adaptive){
                                 begin_message <<- "Click the action button to begin."
@@ -85,11 +87,7 @@ ShinyGUI <- setRefClass("ShinyGUI",
                               demographics <<- list()
                               lastpage <<- function(person) 
                                             return(list(h5("You have successfully completed the interface.
-                                                   Click the action button to terminate the application.")))
-                              if(!is.null(shinyGUI$stopApp) && !shinyGUI$stopApp)
-                                  lastpage <<- function(person) 
-                                      return(list(h5("You have successfully completed the interface.
-                                                   Please close the tab/web browser to terminate the application.")))
+                                                   It is now safe to leave the session.")))
                               temp_file <<- ''
                               css <<- ''
                               password <<- data.frame()
@@ -98,9 +96,9 @@ ShinyGUI <- setRefClass("ShinyGUI",
                               if(length(shinyGUI)){
                                   dnames <- names(shinyGUI)
                                   gnames <- c('title', 'authors', 'instructions', 'firstpage', 'demographics',
-                                              'demographics_inputIDs', 'temp_file', 
+                                              'demographics_inputIDs', 'temp_file', "time_remaining", "response_msg",
                                               'lastpage', 'css', 'stem_dims', 'forced_choice', 'stem_locations',
-                                              'begin_message', 'stopApp', 'ui', 'password', 'stem_default_format',
+                                              'begin_message', 'ui', 'password', 'stem_default_format',
                                               'stem_expressions', 'theme', 'time_before_answer', 'choiceNames',
                                               'choiceValues')
                                   if(!all(dnames %in% gnames))
@@ -120,14 +118,16 @@ ShinyGUI <- setRefClass("ShinyGUI",
                                       author <<- shinyGUI$authors
                                   if(!is.null(shinyGUI$firstpage)) 
                                       firstpage <<- shinyGUI$firstpage
+                                  if(!is.null(shinyGUI$time_remaining)) 
+                                      time_remaining <<- shinyGUI$time_remaining
+                                  if(!is.null(shinyGUI$response_msg)) 
+                                      response_msg <<- shinyGUI$response_msg
                                   if(!is.null(shinyGUI$demographics)){
                                       demographics <<- shinyGUI$demographics
                                       demographic_inputIDs <<- shinyGUI$demographics_inputIDs
                                   }
                                   if(!is.null(shinyGUI$forced_choice))
                                       forced_choice <<- shinyGUI$forced_choice
-                                  if(!is.null(shinyGUI$stopApp))
-                                      stopApp <<- shinyGUI$stopApp
                                   if(!is.null(shinyGUI$lastpage)) 
                                       lastpage <<- shinyGUI$lastpage
                                   if(!is.null(shinyGUI$temp_file))

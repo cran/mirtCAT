@@ -2,6 +2,16 @@
 .MCE$complete <- TRUE
 .MCE$prevClick <- as.integer(NA)
 
+#' Get the interal working enviroment state during mirtCAT session
+#' 
+#' This function is used to access the internal state of the mirtCAT GUI session. 
+#' It is only useful when designing a customized GUI using the \code{shinyGUI$ui}
+#' input to \code{\link{mirtCAT}}.
+#' 
+#' @export
+#' @return a list containing the internal enviromental components for mirtCAT
+get_mirtCAT_env <- function() return(as.list(.MCE))
+
 FI <- function(mirt_item, Theta){
     .Call('ItemInfo', mirt_item, Theta)
 }
@@ -260,7 +270,13 @@ formatTime <- function(delta){
     out
 }
 
-last_item <- function(items_answered) items_answered[max(which(!is.na(items_answered)))]
+last_item <- function(items_answered){
+    not_na <- !is.na(items_answered)
+    ret <- if(any(not_na)){
+        items_answered[max(which(not_na))]
+    } else 0L
+    ret
+}
 
 # TODO this can be modified to accept other info (as well as 'start')
 possible_pattern_thetas <- function(possible_patterns, test, method = 'EAP'){

@@ -1,3 +1,23 @@
+# mirtCAT 1.8
+
+- default wrapper to `Questions` element in `df` input now uses `shiny::HTML` rather than the previous
+  `shiny::p`. This allows for HTML code to more naturally be included, as well as the use of `shiny` 
+  tag constructor functions when used in concert with `as.character()`. This deprecates the previous
+  `df$StemExpressions` format 
+  
+- list inputs  for `choiceValues` and `choiceNames` can accept named input elements
+  that match the associated rownames in the `df` input to avoid the use of placeholders
+
+- The final page splash screen now removes the `Next` button to avoid confusion (suggested by 
+  Daniel Sommerhoff). Applications must be explicitly closed now by the user, and consequently
+  the `stopApp` logical to the `shinyGUI` list has been deprecated
+  
+- Fixed the random item selection exposure control, which was selection suboptimal items instead
+  (reported by @machow on Github)
+
+- When Type input is `text` or `textArea` and `forced_choice = TRUE` then blocks of text input
+  will also now be required. Otherwise, a message will be printed to the GUI
+
 # mirtCAT 1.7
 
 - message added in red whenever selection conditions not met (e.g., when using forced choice, rating

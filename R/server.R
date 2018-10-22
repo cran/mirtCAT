@@ -81,7 +81,7 @@ server <- function(input, output, session) {
         }
         
         # run survey
-        outmessage <- HTML("<p style='color:red;'> <em>Please provide a suitable response.</em> </p>")
+        outmessage <- HTML(paste0("<p style='color:red;'> <em>", .MCE$shinyGUI$response_msg, "</em> </p>"))
         if(click > 2L && !.MCE$design@stop_now && !.MCE$STOP){
             if(itemclick >= 1L){
                 pick <- .MCE$person$items_answered[itemclick]
@@ -102,6 +102,8 @@ server <- function(input, output, session) {
                         ip <- NULL
                     } 
                 }
+                if(.MCE$shinyGUI$forced_choice && .MCE$shinyGUI$df$Type[pick] %in% c('text', 'textArea'))
+                    if(ip == "") ip <- NULL
                 if(!is.null(ip) && .MCE$prevClick != click){
                     ip <- as.character(ip)
                     nanswers <- length(ip)
@@ -122,7 +124,7 @@ server <- function(input, output, session) {
                     }
                     if(!is.null(.MCE$shinyGUI$df$Mastery)){
                         mastery <- as.logical(.MCE$shinyGUI$df$Mastery[pick])
-                        if(mastery && .MCE$person$responses[pick] == 0L){
+                        if(isTRUE(mastery) && .MCE$person$responses[pick] == 0L){
                             outmessage <- HTML("<p style='color:red;'><em>The answer provided was incorrect. Please select an alternative.</em></p>")
                             .MCE$shift_back <- .MCE$shift_back + 1L
                             .MCE$invalid_count <- .MCE$invalid_count + 1L
@@ -219,11 +221,8 @@ server <- function(input, output, session) {
             }
             if(.MCE$shinyGUI$temp_file != '')
                 file.remove(.MCE$shinyGUI$temp_file)
+            removeUI(selector = "div:has(> #Next)", immediate = TRUE)
             return(.MCE$shinyGUI$lastpage(person=.MCE$person))
-        } else {
-            if(.MCE$shinyGUI$stopApp) stopApp()
-            else return(.MCE$shinyGUI$lastpage(person=.MCE$person))
-            return(NULL)
         }
         
     })

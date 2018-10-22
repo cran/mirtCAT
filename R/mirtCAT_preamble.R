@@ -50,7 +50,7 @@ mirtCAT_preamble_internal <-
         is_adaptive <- !is.null(mo)
         Names <- if(!is.null(mo)) colnames(mo@Data$data) else NULL
         if(is.null(shinyGUI$stem_default_format)) 
-            shinyGUI$stem_default_format <- shiny::p
+            shinyGUI$stem_default_format <- shiny::HTML
         if(is.null(df)){
             if(is.null(mo)) stop('No df or mo supplied', call.=FALSE)
             if(is.null(local_pattern)) stop('is.null df input, and no local_pattern supplied', 
@@ -76,23 +76,34 @@ mirtCAT_preamble_internal <-
         } else {
             if(!is.data.frame(df))
                 stop('df input must be a data.frame', call.=FALSE)
+            if(any(colnames(df) == 'StemExpression'))
+                stop('StemExpression input no longer supported. Please pass raw HTML code to Question variable in df', call.=FALSE)
             if(any(sapply(df, class) == 'factor'))
                 stop('data.frame requires characters instead of factors. 
                         To avoid, use stringsAsFactors = FALSE in your data.frame',
                         call.=FALSE)
             nitems <- nrow(df)
-            StemExpression <- if(is.null(df$StemExpression)) logical(length(df$Type))
-            else as.logical(df$StemExpression)
-            stem_expressions <- rep(NA, length(df$Type))
-            stem_expressions[StemExpression] <- df$Question[StemExpression]
+            df_rownames <- rownames(df)
             df <- lapply(df, as.character)
-            for(i in seq_len(length(df$Type)))
-                if(StemExpression[i]) df$Question[i] <- ''
             df$Rendered_Question <- lapply(df$Question, function(x, fun) shiny::withMathJax(fun(x)),
                                   fun=shinyGUI$stem_default_format)
             if(length(customTypes)){
                 pick <- df$Type %in% names(customTypes)
                 df$Rendered_Question[pick] <- ''
+            }
+            if(length(names(shinyGUI$choiceNames)) > 0L && any(names(shinyGUI$choiceNames) %in% df_rownames)){
+                tmp <- vector('list', nitems)
+                names(tmp) <- df_rownames
+                for(nm in names(shinyGUI$choiceNames))
+                    tmp[[nm]] <- shinyGUI$choiceNames[[nm]]
+                shinyGUI$choiceNames <- tmp
+            }
+            if(length(names(shinyGUI$choiceValues)) > 0L && any(names(shinyGUI$choiceValues) %in% df_rownames)){
+                tmp <- vector('list', nitems)
+                names(tmp) <- df_rownames
+                for(nm in names(shinyGUI$choiceValues))
+                    tmp[[nm]] <- shinyGUI$choiceValues[[nm]]
+                shinyGUI$choiceValues <- tmp
             }
             if(is.null(shinyGUI$choiceNames))
                 shinyGUI$choiceNames <- shinyGUI$choiceValues <- vector('list', nitems)
@@ -107,7 +118,6 @@ mirtCAT_preamble_internal <-
             item_answers <- obj$item_answers
             item_options <- obj$item_options
             shinyGUI$stem_locations <- df[["Stem"]]
-            shinyGUI$stem_expressions <- stem_expressions
             Timer <- df[["Timer"]]
             if(is.null(Timer)) Timer <- rep(NA, nitems)
         }
