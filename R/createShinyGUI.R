@@ -5,6 +5,8 @@
 #' through \url{http://www.shinyapps.io/}. The function \code{\link{mirtCAT_preamble}} must be 
 #' run \emph{before} this function is called. The object is executed by calling \code{\link{runApp}}.
 #' 
+#' @param sessionName the unique name of the session (see \code{\link{mirtCAT}} for details)
+#' 
 #' @param ui a shiny UI function used to define the interface. If \code{NULL}, the default one will be used. 
 #'   See \code{mirtCAT:::default_UI} for the internal code
 #' 
@@ -27,17 +29,22 @@
 #' @examples 
 #' \dontrun{
 #' 
-#' mirtCAT_preamble(df = df)
+#' sessionName <- 'My session'
+#' mirtCAT_preamble(sessionName=sessionName, df=df)
 #' runApp(createShinyGUI(), port = 8000)
 #' 
-#' person <- getPerson()
+#' person <- getPerson(sessionName)
 #' summary(person)
 #' 
 #' } 
-createShinyGUI <- function(ui = NULL){
-    on.exit(.MCE$preamble_defined <- .MCE$start_time <- NULL)
-    if(is.null(.MCE$preamble_defined))
+createShinyGUI <- function(sessionName, ui = NULL){
+    if(missing(sessionName)) stop('Must specify sessionName')
+    on.exit(.MCE[[sessionName]]$preamble_defined <- .MCE[[sessionName]]$start_time <- NULL)
+    if(is.null(.MCE[[sessionName]]$preamble_defined))
         stop('Please use a fresh mirtCAT_preamble() call prior to calling createShinyGUI().')
     if(is.null(ui)) ui <- default_UI
-    return(shinyApp(ui=ui(), server=server))
+    server2 <- server
+    txt <- parse(text=sprintf("getSessionName <- function() \'%s\'", sessionName))
+    body(server2)[[2]] <- substitute(eval(txt))
+    return(shinyApp(ui=ui(sessionName), server=server2))
 }
