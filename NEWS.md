@@ -1,3 +1,32 @@
+# mirtCAT 1.10
+
+- Time remaining now reported in real-time, where now the last ten minutes of a GUI session prints
+  the minutes and seconds reminaing 
+
+- Re-work the `updateDesign()` function to more naturally move through the CAT session manually.
+  Previous response and selected item arguments now replaced with `new_response` and `new_item`, 
+  respectively, and example documentation updated to reflect this change
+
+- `ordered` and `unordered` constraints no longer stop in the middle of testlet set, 
+  thereby ignoring other stoping criteria (suggested by Christoph König)
+
+- `choiceNames` and `choiceValues` inputs required additional unnaming (reported by Ryan Kelley)
+
+- Up to three attempts are allowed when users are required to provide a password (requested by Aron Fi)
+
+- `createShinyGUI()` now contains a `host_server` logical argument to indicate whether the GUI
+  is hosted on a remote server or locally. This triggers whether `shiny::stopApp()` should be
+  executed upon completion (on servers this should be executed to avoid stopping the app
+  when multiple users are active)
+
+- previously provided `sessionName` argument now removed in favour of handling this feature 
+  in the back-end. This helped patch a bug related to multiple instances of the GUI on 
+  a single server (reported by Daniel Sommerhoff)
+
+- `thetas.start` now accepts a matrix input for simulations with different latent trait starting values.
+  Note that this also will affect the `start_item` criteria as well since the optimal first item
+  will incorporate the new starting trait location (requested by Niek Frans)
+
 # mirtCAT 1.9.3
 
 - Added a element to `person` objects and results return from GUI version of `mirtCAT()` called

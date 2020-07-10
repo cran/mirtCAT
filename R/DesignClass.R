@@ -37,7 +37,8 @@ Design <- setClass(Class = "Design",
                              person_properties = 'data.frame',
                              Update.thetas = 'function',
                              constr_fun = 'function',
-                             stage = 'integer'),
+                             stage = 'integer',
+                             allow_constrain_breaks = 'logical'),
                    validity = function(object) return(TRUE)
 )
 
@@ -128,13 +129,14 @@ setMethod("initialize", signature(.Object = "Design"),
               .Object@person_properties <- data.frame()
               .Object@Update.thetas <- Update_thetas
               .Object@stage <- 2L
+              .Object@allow_constrain_breaks <- FALSE
               if(length(design)){
                   dnames <- names(design)
                   gnames <- c('min_SEM', 'thetas.start', 'min_items', 'max_items', 'quadpts', 'max_time',
                               'theta_range', 'weights', 'KL_delta', 'content', 'content_prop',
                               'classify', 'classify_CI', 'exposure', 'delta_thetas', 'constraints',
                               'customNextItem', 'test_properties', 'person_properties', 'constr_fun',
-                              'customUpdateThetas')
+                              'customUpdateThetas', "allow_constrain_breaks")
                   if(!all(dnames %in% gnames))
                       stop('The following inputs to design are invalid: ',
                            paste0(dnames[!(dnames %in% gnames)], ' '), call.=FALSE)
@@ -169,6 +171,8 @@ setMethod("initialize", signature(.Object = "Design"),
                       .Object@max_time <- design$max_time
                   if(!is.null(design$customUpdateThetas))
                       .Object@Update.thetas <- design$customUpdateThetas
+                  if(!is.null(design$allow_constrain_breaks))
+                      .Object@allow_constrain_breaks <- design$allow_constrain_breaks
                   if(!is.null(design$test_properties)){
                       .Object@test_properties <- design$test_properties
                       if(nrow(.Object@test_properties) != nitems)
@@ -279,6 +283,7 @@ setMethod("Update.stop_now", signature(.Object = "Design"),
               if(person$score){
                   if(nanswered >= .Object@min_items){
                       diff <- person$thetas_SE_history[nrow(person$thetas_SE_history), ]
+                      diff[is.na(diff)] <- Inf
                       if(!is.nan(.Object@classify[1L])){
                           z <- -abs(person$thetas - .Object@classify) / diff
                           .Object@met_classify <- as.vector(z < qnorm(.Object@classify_alpha))
@@ -299,6 +304,20 @@ setMethod("Update.stop_now", signature(.Object = "Design"),
               if(.Object@stage > 1L && nanswered == .Object@max_items) 
                   .Object@stop_now <- TRUE
               if(.Object@max_time <= sum(person$item_time)) .Object@stop_now <- TRUE
+              # don't stop if in the middle of an (un)order constraint
+              if(!.Object@allow_constrain_breaks){
+                  last_item_loc <- max(which(!is.na(person$items_answered)))
+                  last_item <- person$items_answered[last_item_loc]
+                  insset <- if(length(.Object@constraints))
+                      any(sapply(.Object@constraints, function(x) any(x %in% last_item))) 
+                      else FALSE
+                  if(insset && any(names(.Object@constraints) == 'ordered')){ # works for unordered too
+                      initem <- which(sapply(.Object@constraints, function(x) any(x %in% last_item)))
+                      len <- length(.Object@constraints[[initem]])
+                      if(.Object@constraints[[initem]][len] != last_item)
+                          .Object@stop_now <- FALSE
+                  }
+              }
               .Object
           }
 )

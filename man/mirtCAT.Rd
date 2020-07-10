@@ -7,22 +7,41 @@
 \alias{plot.mirtCAT}
 \title{Generate an adaptive or non-adaptive test HTML interface}
 \usage{
-mirtCAT(df = NULL, mo = NULL, method = "MAP", criteria = "seq",
-  start_item = 1, local_pattern = NULL, AnswerFuns = list(),
-  design_elements = FALSE, cl = NULL, progress = FALSE,
-  primeCluster = TRUE, customTypes = list(), design = list(),
-  shinyGUI = list(), preCAT = list(),
-  sessionName = createSessionName(), ...)
+mirtCAT(
+  df = NULL,
+  mo = NULL,
+  method = "MAP",
+  criteria = "seq",
+  start_item = 1,
+  local_pattern = NULL,
+  AnswerFuns = list(),
+  design_elements = FALSE,
+  cl = NULL,
+  progress = FALSE,
+  primeCluster = TRUE,
+  customTypes = list(),
+  design = list(),
+  shinyGUI = list(),
+  preCAT = list(),
+  ...
+)
 
 \method{print}{mirtCAT}(x, ...)
 
 \method{summary}{mirtCAT}(object, sort = TRUE, ...)
 
-\method{plot}{mirtCAT}(x, pick_theta = NULL, true_thetas = TRUE,
-  SE = 1, main = NULL, par.strip.text = list(cex = 0.7),
-  par.settings = list(strip.background = list(col = "#9ECAE1"),
-  strip.border = list(col = "black")), scales = list(x = list(rot = 90)),
-  ...)
+\method{plot}{mirtCAT}(
+  x,
+  pick_theta = NULL,
+  true_thetas = TRUE,
+  SE = 1,
+  main = NULL,
+  par.strip.text = list(cex = 0.7),
+  par.settings = list(strip.background = list(col = "#9ECAE1"), strip.border = list(col
+    = "black")),
+  scales = list(x = list(rot = 90)),
+  ...
+)
 }
 \arguments{
 \item{df}{a \code{data.frame} containing the \code{character} vector inputs required to generate 
@@ -243,12 +262,13 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
     multidimensional, either a single value or a vector of values may be supplied to provide
     SEM criteria values for each dimension}
     
-  \item{delta_thetas}{Default is \code{rep(0, nfact)}; stopping criteria based on the change in latent
+  \item{\code{delta_thetas}}{Default is \code{rep(0, nfact)}; stopping criteria based on the change in latent
     trait values (e.g., a change from \code{theta = 1.5} to \code{theta = 1.54} would 
     stop the CAT if \code{delta_thetas = 0.05}). The default disables this stopping criteria}
     
-  \item{\code{thetas.start}}{a numeric vector of starting values for the theta parameters.
-    Default is \code{rep(0, nfact)}}
+  \item{\code{thetas.start}}{a numeric vector of starting values for the theta parameters 
+     (default is \code{rep(0, nfact)}) or an \code{matrix} with N rows and nfact columns, where N
+     is equal to \code{nrow(local_pattern)}}
   
   \item{\code{min_items}}{minimum number of items that must be answered 
     before the test is stopped. Default is \code{1}}
@@ -266,6 +286,10 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
   \item{\code{theta_range}}{upper and lower range for the theta 
     integration grid. Used in conjunction with \code{quadpts} to generate an equally spaced 
     quadrature grid. Default is \code{c(-6,6)}}
+    
+  \item{\code{allow_constrain_breaks}}{logical; should the test be allowed to terminate in 
+    the middle of administering the items in an (un)ordered testlet set specified in 
+    \code{constraints}? Default is \code{FALSE}} 
 
   \item{\code{weights}}{weights used when \code{criteria == 'Wrule'}, but also 
     will be applied for weighted trace functions in the T- and A-rules. The default 
@@ -555,8 +579,6 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
      }
    }
    
-   \item{\code{time_remaining}}{string to print prior to the length of time remaining in the session. 
-     Default is \code{"Time remaining:"}}
      
    \item{\code{response_msg}}{string to print when valid responses are required but the users does not provide
      a valid input. Default is \code{"Please provide a suitable response"}}    
@@ -588,9 +610,6 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
       response pattern (i.e., when maximum-likelihood estimation contains a potential optimum)?
       Default is FALSE}
 }}
-
-\item{sessionName}{a unique name used to track the internal CAT objects through \code{shiny}. 
-By default the function \code{\link{createSessionName}} is called to create a unique name}
 
 \item{...}{additional arguments to be passed to \code{\link{mirt}}, \code{\link{fscores}}, 
 \code{\link{runApp}}, or \code{lattice}}

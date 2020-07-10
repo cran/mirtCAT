@@ -5,7 +5,7 @@
 #' For more information see \url{http://shiny.rstudio.com/articles/persistent-data-storage.html} for 
 #' further information about saving output remotely when using \code{shiny}.
 #' 
-#' @param sessionName the unique name of the session (see \code{\link{mirtCAT}} for details)
+# @param sessionName the unique name of the session (see \code{\link{mirtCAT}} for details)
 #' 
 #' @param final_fun a function called just before the shiny GUI has been terminated, primarily for
 #'   saving results externally with packages such as \code{rDrop2}, \code{RAmazonS3}, 
@@ -38,25 +38,25 @@
 #' mirtCAT_preamble(df = df)
 #' 
 #' }
-mirtCAT_preamble <- function(sessionName, ..., final_fun = NULL){
-    if(missing(sessionName)) stop('Must specify sessionName')
-    return(mirtCAT_preamble_internal(sessionName = sessionName, 
-                                     final_fun = final_fun, ...))
+mirtCAT_preamble <- function(..., final_fun = NULL){
+    return(mirtCAT_preamble_internal(final_fun = final_fun, ...))
 }
 
 # set this up to avoid double documentation
 mirtCAT_preamble_internal <- 
-    function(sessionName, df = NULL, mo = NULL, method = 'MAP', criteria = 'seq', AnswerFuns = list(),
+    function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq', AnswerFuns = list(),
              start_item = 1, local_pattern = NULL, design_elements=FALSE, cl=NULL,
              design = list(), shinyGUI = list(), preCAT = list(), customTypes = list(),
              final_fun = NULL, ...)
     {
+        sessionName <- 'MASTER'
         is_adaptive <- !is.null(mo)
         Names <- if(!is.null(mo)) colnames(mo@Data$data) else NULL
         if(is.null(shinyGUI$stem_default_format)) 
             shinyGUI$stem_default_format <- shiny::HTML
         if(is.null(df)){
             if(is.null(mo)) stop('No df or mo supplied', call.=FALSE)
+            if(design_elements) local_pattern <- rep(NA, extract.mirt(mo, 'nitems'))
             if(is.null(local_pattern)) stop('is.null df input, and no local_pattern supplied', 
                                             call.=FALSE)
             if(is.vector(local_pattern)) local_pattern <- matrix(local_pattern, 1L)
@@ -69,14 +69,16 @@ mirtCAT_preamble_internal <-
             df <- list()
             Timer <- rep(NA, length(K))
             item_answers <- NULL
-            sapply(1L:length(K), function(i, local_pattern, item_options, mins){
-                opts <- item_options[[i]] + mins[i]
-                if(!all(local_pattern[,i] %in% opts)){
-                    outs <- as.character(c(i, min(opts), max(opts)))
-                    stop(sprintf('For item %s, responses must be between %s and %s. Please fix.',
-                                 outs[1L], outs[2L], outs[3L]), call.=FALSE)
-                }
-            }, local_pattern=local_pattern, item_options=item_options, mins=mo@Data$mins)
+            if(!design_elements){
+                sapply(1L:length(K), function(i, local_pattern, item_options, mins){
+                    opts <- item_options[[i]] + mins[i]
+                    if(!all(local_pattern[,i] %in% opts)){
+                        outs <- as.character(c(i, min(opts), max(opts)))
+                        stop(sprintf('For item %s, responses must be between %s and %s. Please fix.',
+                                     outs[1L], outs[2L], outs[3L]), call.=FALSE)
+                    }
+                }, local_pattern=local_pattern, item_options=item_options, mins=mo@Data$mins)
+            }
         } else {
             if(!is.data.frame(df))
                 stop('df input must be a data.frame', call.=FALSE)
@@ -177,6 +179,8 @@ mirtCAT_preamble_internal <-
             tmp2 <- integer(length(design_object@start_item))
             for(i in seq_len(length(design_object@start_item))){
                 design_object@criteria <- start_item[i]
+                if(!is.null(design$thetas.start) && is.matrix(design$thetas.start))
+                    person_object$thetas <- matrix(design$thetas.start[i,], 1L)
                 tmp2[i] <- findNextCATItem(person=person_object, test=test_object, 
                                           design=design_object, start=FALSE) 
             }
@@ -217,7 +221,7 @@ mirtCAT_preamble_internal <-
     }
 
 
-mirtCAT_post_internal <- function(person, design, has_answers = FALSE, GUI = FALSE, sessionName){
+mirtCAT_post_internal <- function(person, design, has_answers = FALSE, GUI = FALSE){
     if(!is.list(person)) person <- list(person)
     ret.out <- vector('list', length(person))
     for(i in seq_len(length(person))){
@@ -225,7 +229,7 @@ mirtCAT_post_internal <- function(person, design, has_answers = FALSE, GUI = FAL
         ret <- list(login_name=person[[i]]$login_name,
                     raw_responses=person[[i]]$raw_responses,
                     scored_responses=if(person[[1L]]$score || has_answers) 
-                        as.integer(person[[i]]$responses + .MCE[[sessionName]]$mirt_mins) 
+                        as.integer(person[[i]]$responses + .MCE[['MASTER']]$mirt_mins) 
                     else rep(NA, length(person[[i]]$raw_responses)),
                     items_answered=person[[i]]$items_answered,
                     thetas=person[[i]]$thetas,
@@ -249,7 +253,7 @@ mirtCAT_post_internal <- function(person, design, has_answers = FALSE, GUI = FAL
             ret$classify_values <- design@classify
         }
         colnames(ret$thetas) <- colnames(ret$SE_thetas) <- colnames(ret$thetas_history) <-
-            colnames(ret$thetas_SE_history) <- paste0('Theta_', 1L:.MCE[[sessionName]]$test@nfact)
+            colnames(ret$thetas_SE_history) <- paste0('Theta_', 1L:.MCE[['MASTER']]$test@nfact)
         if(!person[[i]]$score)
             ret$thetas <- ret$SE_thetas <- ret$thetas_history <- ret$thetas_SE_history <- NA
         class(ret) <- 'mirtCAT'

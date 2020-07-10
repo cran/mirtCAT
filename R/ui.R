@@ -1,4 +1,6 @@
-default_UI <- function(sessionName){
+default_UI <- function(){
+    
+    sessionName <- 'MASTER'
     
     fluidPage(theme = if(.MCE[[sessionName]]$shinyGUI$theme != '') 
         if(requireNamespace("shinythemes", quietly = TRUE)){
@@ -14,13 +16,8 @@ default_UI <- function(sessionName){
         #  Application title
         headerPanel(.MCE[[sessionName]]$shinyGUI$title),
         
-        if(is.finite(.MCE[[sessionName]]$design@max_time)){
-            h6(paste0(.MCE[[sessionName]]$shinyGUI$time_remaining, 
-                      formatTime(.MCE[[sessionName]]$design@max_time - 
-                                     sum(.MCE[[sessionName]]$person$item_time))))
-        } else NULL,
-        
         sidebarPanel(
+            h4(textOutput("currentTime")),
             if(.MCE[[sessionName]]$shinyGUI$author != '') h4("Authors:") else NULL,
             if(.MCE[[sessionName]]$shinyGUI$author != '') h5(.MCE[[sessionName]]$shinyGUI$author) else NULL,
             div(

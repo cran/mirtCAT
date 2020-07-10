@@ -4,13 +4,15 @@
 \alias{createShinyGUI}
 \title{Function returning an object used by shiny}
 \usage{
-createShinyGUI(sessionName, ui = NULL)
+createShinyGUI(ui = NULL, host_server = TRUE)
 }
 \arguments{
-\item{sessionName}{the unique name of the session (see \code{\link{mirtCAT}} for details)}
-
 \item{ui}{a shiny UI function used to define the interface. If \code{NULL}, the default one will be used. 
 See \code{mirtCAT:::default_UI} for the internal code}
+
+\item{host_server}{logical; is \code{createShinyGUI()} being used on a remote server or executed locally?
+When \code{TRUE} any calls to \code{\link{stopApp}} are suppressed to allow for multiple sessions to
+be executed. Note that \code{FALSE} gives the same behaviour as the GUI in \code{\link{mirtCAT}}}
 }
 \description{
 This function returns the GUI setup results by calling \code{\link{shinyApp}}. 
@@ -21,12 +23,13 @@ run \emph{before} this function is called. The object is executed by calling \co
 \examples{
 \dontrun{
 
-sessionName <- 'My session'
-mirtCAT_preamble(sessionName=sessionName, df=df)
-runApp(createShinyGUI(), port = 8000)
+mirtCAT_preamble(df=df)
+runApp(createShinyGUI(host_server = FALSE), port = 8000) # run locally
 
-person <- getPerson(sessionName)
+person <- getPerson()
 summary(person)
+
+runApp(createShinyGUI(), port = 8000) # for remote server hosting
 
 } 
 }

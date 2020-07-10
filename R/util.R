@@ -8,10 +8,18 @@
 #' 
 #' @param n number of upper/lower characters to sample
 #' 
+#' @param datetime logical; include the current date/time the function was called
+#'   in the string as well? This further helps with the uniqueness of the generated
+#'   string
+#' 
 #' @export
 #' @return a list containing the internal enviromental components for mirtCAT
-createSessionName <- function(n = 30)
-    paste0(sapply(1:n, function(x) sample(c(LETTERS, letters), 1L)), collapse='')
+createSessionName <- function(n = 30, datetime = TRUE){
+    ret <- paste0(sapply(1:n, function(x) sample(c(LETTERS, letters), 1L)), collapse='')
+    if(datetime) ret <- paste0(ret, "_", Sys.time())
+    ret
+}
+
 
 #' Get the interal working enviroment state during mirtCAT session
 #' 
@@ -154,8 +162,8 @@ buildShinyElements <- function(questions, itemnames, customTypes, choiceNames, c
         if(Type[i] == 'radio'){
             cNs <- cVs <- cs <- NULL 
             if(length(choiceNames[[i]]) && is.list(choiceNames[[i]])){
-                cNs <- choiceNames[[i]]
-                cVs <- choiceValues[[i]]
+                cNs <- unname(choiceNames[[i]])
+                cVs <- unname(choiceValues[[i]])
                 choices_list[[i]] <- as.character(cVs)
             } else {
                 cs <- choices[i, !is.na(choices[i, ])]
@@ -213,8 +221,8 @@ buildShinyElements <- function(questions, itemnames, customTypes, choiceNames, c
         } else if(Type[i] == 'checkbox'){
             cNs <- cVs <- cs <- NULL 
             if(length(choiceNames[[i]]) && is.list(choiceNames[[i]])){
-                cNs <- choiceNames[[i]]
-                cVs <- choiceValues[[i]]
+                cNs <- unname(choiceNames[[i]])
+                cVs <- unname(choiceValues[[i]])
                 choices_list[[i]] <- as.character(cVs)
             } else {
                 cs <- choices[i, !is.na(choices[i, ])]
@@ -267,18 +275,13 @@ buildShinyElements <- function(questions, itemnames, customTypes, choiceNames, c
 formatTime <- function(delta){
     hours <- delta %/% 3600
     mins <- delta %/% 60 - hours * 60
-    if(hours > 1){
-        h <- hours
-        m <- ifelse((mins %/% 30) == 1, 30, 0) 
-        out <- sprintf('More than %d hours and %d minutes.', h, m)
-    } else if(mins >= 15) {
-        m <- switch(as.character((mins %/% 15)),
-                    '3' = '45', '2' = '30', '1' = '15')
-        out <- sprintf('More than %s minutes.', m)
+    secs <- ceiling(delta - hours * 60 - mins * 60)
+    if(hours >= 1){
+        out <- sprintf('%s hour and %s minutes.', hours, mins)
+    } else if(mins >= 10){
+        out <- sprintf('%s minutes.', mins)
     } else {
-        m <- switch(as.character((mins %/% 5) + 1),
-                    '3' = '15', '2' = '10', '1' = '5')
-        out <- sprintf('Less than %s minutes.', m)
+        out <- sprintf('%s minutes and %s seconds.', mins, secs)
     }
     out
 }
@@ -325,12 +328,27 @@ stemContent <- function(pick, sessionName){
 
 verifyPassword <- function(input, password, sessionName){
     nr <- nrow(password)
+    pswd <- if(!is.null(input$PaSsWoRd_3)) isolate(input$PaSsWoRd_3) else
+        if(!is.null(input$PaSsWoRd_2)) isolate(input$PaSsWoRd_2) else
+        if(!is.null(input$PaSsWoRd_1)) isolate(input$PaSsWoRd_1) else isolate(input$PaSsWoRd)
     verified <- if(nr == 1L){
-        input$PaSsWoRd %in% password
+        pswd %in% password
     } else {
-        tmp <- subset(password, password[,1L] == input$UsErNaMe)
-        .MCE[[sessionName]]$person$login_name <- input$UsErNaMe
-        input$PaSsWoRd %in% tmp[,-1L]
+        user <- if(!is.null(input$UsErNaMe_3)) isolate(input$UsErNaMe_3) else
+            if(!is.null(input$UsErNaMe_2)) isolate(input$UsErNaMe_2) else
+                if(!is.null(input$UsErNaMe_1)) isolate(input$UsErNaMe_1) else isolate(input$UsErNaMe)
+        tmp <- subset(password, password[,1L] == user)
+        if(!length(tmp)){
+            FALSE
+        } else {
+            .MCE[[sessionName]]$person$login_name <- user
+            pswd %in% tmp[,-1L]
+        }
     }
     verified
+}
+
+deepCopyPerson <- function(ref){
+    copy <- ref$copy()
+    copy
 }

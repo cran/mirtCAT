@@ -1,19 +1,35 @@
 server <- function(input, output, session) {    
     
-    getSessionName <- function() 42
+    sessionName <- createSessionName()
     
-    sessionName <- getSessionName()
+    .MCE[[sessionName]] <- as.environment(as.list(.MCE[['MASTER']], all.names=TRUE))
+    .MCE[[sessionName]]$person <- deepCopyPerson(.MCE[['MASTER']]$person)
+    .MCE[[sessionName]]$initial_start_time <- Sys.time()
     
     session$onSessionEnded(function() {
-        if(!.MCE[[getSessionName()]]$design@stop_now){
+        if(!.MCE[[sessionName]]$design@stop_now){
             message('WARNING: mirtCAT GUI session unexpectedly terminated early')
-            .MCE[[getSessionName()]]$person$terminated_sucessfully <- FALSE
-        } else .MCE[[getSessionName()]]$person$terminated_sucessfully <- TRUE
-        stopApp()
+            .MCE[[sessionName]]$person$terminated_sucessfully <- FALSE
+        } else .MCE[[sessionName]]$person$terminated_sucessfully <- TRUE
+        .MCE[['COMPLETED']] <- .MCE[[sessionName]]
+        .MCE[['COMPLETED']]$person <- deepCopyPerson(.MCE[[sessionName]]$person) 
+        .MCE[[sessionName]] <- NULL
+        if(!.MCE[['MASTER']]$host_server) stopApp()
+        invisible()
     })
     
     output$Main <- renderUI({
         dynamicUi()
+    })
+    
+    output$currentTime <- renderText({
+        invalidateLater(1000, session)
+        delta_time <- try(as.integer(Sys.time() - .MCE[[sessionName]]$initial_start_time))
+        if(is(delta_time, 'try-error')) browser()
+        if(is.finite(.MCE[[sessionName]]$design@max_time)){
+            return(paste0(.MCE[[sessionName]]$shinyGUI$time_remaining,
+                      formatTime(.MCE[[sessionName]]$design@max_time - delta_time)))
+        } else return(NULL)
     })
     
     dynamicUi <- reactive({
@@ -33,20 +49,40 @@ server <- function(input, output, session) {
         
         if(length(.MCE[[sessionName]]$shinyGUI$password)){
             if(click == 0L){
+                .MCE[[sessionName]]$verified <- FALSE
                 if(nrow(.MCE[[sessionName]]$shinyGUI$password) > 1L)
                     return(list(textInput('UsErNaMe', label = "Login Name:"),
                                 passwordInput('PaSsWoRd', 'Password:')))
                 else return(passwordInput('PaSsWoRd', 'Password:'))
-            } else if(click == 1L){
+            } else if(!.MCE[[sessionName]]$verified){
+                .MCE[[sessionName]]$person$password_attempts <- 
+                    .MCE[[sessionName]]$person$password_attempts + 1L
                 .MCE[[sessionName]]$verified <- verifyPassword(input, 
                                                                .MCE[[sessionName]]$shinyGUI$password,
                                                                sessionName)
+                if(!.MCE[[sessionName]]$verified && .MCE[[sessionName]]$person$password_attempts < 
+                   .MCE[[sessionName]]$shinyGUI$max_password_attempts){
+                    attempts_remaining <- .MCE[[sessionName]]$shinyGUI$max_password_attempts - 
+                        .MCE[[sessionName]]$person$password_attempts
+                    if(nrow(.MCE[[sessionName]]$shinyGUI$password) > 1L)
+                        return(list(textInput("UsErNaMe", label = "Login Name:"),
+                                    passwordInput("PaSsWoRd", 'Password:'),
+                                    HTML(paste0("<p style='color:red;'> <em>", 
+                                                sprintf('Incorrect Login Name/Password. Please try again (you have %s attempts remaining).',
+                                                        attempts_remaining)), "</em> </p>")))
+                    else {
+                        return(list(passwordInput("PaSsWoRd", 'Password:'),
+                                    HTML(paste0("<p style='color:red;'> <em>", 
+                                                sprintf('Incorrect Login Password. Please try again (you have %s attempts remaining).',
+                                                        attempts_remaining)), "</em> </p>")))
+                    }
+                }
             }
-            click <- click - 1L
+            click <- click - .MCE[[sessionName]]$person$password_attempts
         }
         
         if(!.MCE[[sessionName]]$verified)
-            return(h3('Incorrect Login Name/Password. Please restart the application and try again.'))
+            return(h3('Login Name/Password were incorrect. Please restart the application and try again.'))
         
         if(.MCE[[sessionName]]$resume_file && click < 1L){
             return(list(h5("Click the action button to continue with your session.")))
@@ -83,6 +119,7 @@ server <- function(input, output, session) {
             .MCE[[sessionName]]$start_time <- proc.time()[3L]
         
         if(.MCE[[sessionName]]$resume_file){
+            .MCE[[sessionName]]$prevClick <- -999L
             .MCE[[sessionName]]$resume_file <- FALSE
             item <- max(which(!is.na(.MCE[[sessionName]]$person$items_answered)))
             stemOutput <- stemContent(item, sessionName=sessionName)
@@ -233,8 +270,7 @@ server <- function(input, output, session) {
             .MCE[[sessionName]]$STOP <- TRUE
             if(!is.null(.MCE[[sessionName]]$final_fun)){
                 ret <- mirtCAT_post_internal(person=.MCE[[sessionName]]$person, design=.MCE[[sessionName]]$design,
-                                             has_answers=.MCE[[sessionName]]$test@has_answers, GUI=TRUE, 
-                                             sessionName=sessionName)
+                                             has_answers=.MCE[[sessionName]]$test@has_answers, GUI=TRUE)
                 .MCE[[sessionName]]$final_fun(person = ret)
             }
             if(.MCE[[sessionName]]$shinyGUI$temp_file != '')
