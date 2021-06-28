@@ -15,18 +15,35 @@ results <- mirtCAT(df = df)
 summary(results)
 
 # max_time
-results <- mirtCAT(df = df, design = list(max_time = 600))
+results <- mirtCAT(df = df, design = list(max_time = 15))
+summary(results)
+
+# item timer
+dftime <- df
+dftime$Timer <- 10
+results <- mirtCAT(df = dftime, design = list(max_time = 600))
+results <- mirtCAT(df = dftime)
+summary(results)
+dftime$Answer <- df$Option.1
+results <- mirtCAT(df = dftime)
 summary(results)
 
 # manual HTML tags, not forced
-df2 <- df
 questions <- c("Building <strong>CATs</strong> with mirtCAT is <br> <br> difficult.",
                "mirtCAT requires a substantial amount of coding.",
                "I would use mirtCAT in my research.")
+df2 <- data.frame(Question = questions, Option = options, Type = "radio")
 results <- mirtCAT(df = df2, shinyGUI=list(forced_choice = FALSE))
 summary(results)
 
-# correct answer scoring
+# correct answer scoring with timer
+df2 <- df
+df2$Answer <- c('Strongly Disagree', 'Neutral', 'Strongly Agree')
+df2$Timer <- 10
+results <- mirtCAT(df = df2)
+summary(results)
+
+# correct answer scoring (mastery)
 df2 <- df
 df2$Answer <- c('Agree', 'Agree', 'Agree')
 df2$Mastery <- c(TRUE, FALSE, FALSE)
@@ -87,6 +104,13 @@ results2 <- mirtCAT(df = df, shinyGUI = list(forced_choice = TRUE,
                                              choiceValues=choiceValues))
 summary(results2)
 
+# in-line HTML construction for Options
+options <- matrix(c("<b>Strongly Disagree</b>", "Disagree", "Neutral", "Agree", "Strongly Agree"),
+                  nrow = 3, ncol = 5, byrow = TRUE)
+df2 <- data.frame(Question = questions, Option = options, Type = "radio", 
+                 HTMLOptions = c(TRUE, FALSE, TRUE))
+results <- mirtCAT(df = df2)
+
 # mathJax test
 df3 <- df
 df3$Question[1] <- 'Something something \\(\\sqrt{2}\\)? Why yes, $$e = mc^2$$'
@@ -102,7 +126,9 @@ lastpagefun <- function(person){
     return(list(h5("You have successfully completed the interface."), 
                    h6(sprintf("Your final theta estimate to two decimal places is %.2f.", est))))
 } 
-results2 <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE, lastpage=lastpagefun))
+df2 <- data.frame(Question = questions, Option = options, Type = "radio", 
+                 HTMLOptions = c(TRUE, FALSE, TRUE))
+results2 <- mirtCAT(df = df2, shinyGUI = list(forced_choice = FALSE, lastpage=lastpagefun))
 
 # save and resume temp file
 results <- mirtCAT(df = df, shinyGUI = list(temp_file = 'thisfile.rds')) #stop early
@@ -114,8 +140,8 @@ summary(results)
 sessionName <- 'My session'
 my_fun <- function(person) cat('Hello world\n')
 mirtCAT_preamble(sessionName=sessionName, df=df, final_fun = my_fun)
-runApp(createShinyGUI(sessionName=sessionName), port = 8000)
-person <- getPerson(sessionName=sessionName)
+runApp(createShinyGUI(), port = 8000)
+person <- getPerson()
 summary(person)
 
 # custom UI
@@ -136,7 +162,7 @@ myUI <- function(sessionName){
 }
 
 mirtCAT_preamble(sessionName=sessionName, df=df)
-runApp(createShinyGUI(sessionName=sessionName, ui=myUI), port = 8000)
+runApp(createShinyGUI(ui=myUI), port = 8000)
 person2 <- mirtCAT(df=df, shinyGUI=list(ui=myUI))
 summary(person2)
 
@@ -215,8 +241,6 @@ results <- mirtCAT(df = df, shinyGUI = list(forced_choice = FALSE),
                    customTypes=list(myQ=myfun))
 
 # audio/video
-dirname <- paste0(getwd(), '/www')
-shiny::addResourcePath('www', dirname)
 df <- data.frame(Question = c("", 
                               as.character(tags$audio(src = "www/clip.mp3", type = "audio/mp3",
                                                       autoplay = TRUE, controls = TRUE)),

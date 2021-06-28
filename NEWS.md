@@ -1,7 +1,19 @@
+# mirtCAT 1.11
+
+- Fix Fisher information bug in unidimensional graded response model applications 
+  (reported by Felix Fischer)
+
+- New argument `df$HTMLOptions` added to indicate whether the `Options.#` inputs should be evaluated
+  using `HTML()` first and passed to the suitable constructor functions (requested by John Manacup)
+
+- `df$Timer` is now printer for each respective item in the GUI, and if time runs out then the item 
+  is either replaced with an NA response or marked as "incorrect" if one or more `Answer` elements
+  were present (requested by Morten Nordmo)
+
 # mirtCAT 1.10
 
 - Time remaining now reported in real-time, where now the last ten minutes of a GUI session prints
-  the minutes and seconds reminaing 
+  the minutes and seconds remaining 
 
 - Re-work the `updateDesign()` function to more naturally move through the CAT session manually.
   Previous response and selected item arguments now replaced with `new_response` and `new_item`, 

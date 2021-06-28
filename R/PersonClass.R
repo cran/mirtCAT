@@ -54,7 +54,7 @@ Person$methods(
     
     # Update thetas
     Update.info_mats = function(design, test){
-        'Update the information matricies for previous answered multidimensional IRT models'
+        'Update the information matrices for previous answered multidimensional IRT models'
         set <- c('Drule', 'Trule', 'Erule', 'Wrule', 'Arule', 'APrule',
                  'DPrule', 'TPrule', 'EPrule', 'WPrule', 'custom')
         if(test@nfact > 1L && design@criteria %in% set){
@@ -62,7 +62,7 @@ Person$methods(
             responses2[design@items_not_scored] <- NA
             pick <- which(!is.na(responses2))
             infos <- lapply(pick, function(x, thetas)
-                FI(extract.item(test@mo, x), Theta=thetas), thetas=thetas)
+                FI(mirt::extract.item(test@mo, x), Theta=thetas), thetas=thetas)
             tmp <- matrix(0, nrow(infos[[1L]]), ncol(infos[[1L]]))
             for(i in seq_len(length(infos)))
                 tmp <- tmp + infos[[i]]

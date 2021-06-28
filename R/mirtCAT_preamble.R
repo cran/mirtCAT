@@ -1,8 +1,8 @@
 #' Preamble function called by mirtCAT
 #' 
 #' This is largely an internal function called by \code{\link{mirtCAT}}, however it is made 
-#' public for better use with external web-hosting interfaces (like \url{http://www.shinyapps.io/}).
-#' For more information see \url{http://shiny.rstudio.com/articles/persistent-data-storage.html} for 
+#' public for better use with external web-hosting interfaces (like shinyapps.io).
+#' For more information see \url{https://shiny.rstudio.com/articles/persistent-data-storage.html} for 
 #' further information about saving output remotely when using \code{shiny}.
 #' 
 # @param sessionName the unique name of the session (see \code{\link{mirtCAT}} for details)
@@ -50,6 +50,7 @@ mirtCAT_preamble_internal <-
              final_fun = NULL, ...)
     {
         sessionName <- 'MASTER'
+        if(!is.null(.MCE$currentSessionName)) .MCE$currentSessionName <- NULL
         is_adaptive <- !is.null(mo)
         Names <- if(!is.null(mo)) colnames(mo@Data$data) else NULL
         if(is.null(shinyGUI$stem_default_format)) 
@@ -90,6 +91,17 @@ mirtCAT_preamble_internal <-
                         call.=FALSE)
             nitems <- nrow(df)
             df_rownames <- rownames(df)
+            if(is.null(shinyGUI$choiceNames))
+                shinyGUI$choiceNames <- shinyGUI$choiceValues <- vector('list', nitems)
+            if(!is.null(df$HTMLOptions)){
+                Options <- df[grepl('Option\\.', colnames(df))]
+                for(pick in which(df$HTMLOptions)){
+                    tmpopts <- lapply(na.omit(as.character(Options[pick, ])), HTML)
+                    names(tmpopts) <- NULL
+                    shinyGUI$choiceValues[[pick]] <- shinyGUI$choiceNames[[pick]] <- tmpopts
+                }
+                df$HTMLOptions <- NULL
+            }
             df <- lapply(df, as.character)
             df$Rendered_Question <- lapply(df$Question, function(x, fun) if(x != "") shiny::withMathJax(fun(x)),
                                   fun=shinyGUI$stem_default_format)
@@ -111,8 +123,6 @@ mirtCAT_preamble_internal <-
                     tmp[[nm]] <- shinyGUI$choiceValues[[nm]]
                 shinyGUI$choiceValues <- tmp
             }
-            if(is.null(shinyGUI$choiceNames))
-                shinyGUI$choiceNames <- shinyGUI$choiceValues <- vector('list', nitems)
             if(length(shinyGUI$choiceNames) != nitems)
                 stop('choiceNames input is not the correct length', call.=FALSE)
             if(length(shinyGUI$choiceValues) != nitems)
@@ -228,7 +238,7 @@ mirtCAT_post_internal <- function(person, design, has_answers = FALSE, GUI = FAL
         person[[i]]$items_answered <- person[[i]]$items_answered[!is.na(person[[i]]$items_answered)]
         ret <- list(login_name=person[[i]]$login_name,
                     raw_responses=person[[i]]$raw_responses,
-                    scored_responses=if(person[[1L]]$score || has_answers) 
+                    scored_responses=if(person[[1L]]$score || any(has_answers)) 
                         as.integer(person[[i]]$responses + .MCE[['MASTER']]$mirt_mins) 
                     else rep(NA, length(person[[i]]$raw_responses)),
                     items_answered=person[[i]]$items_answered,

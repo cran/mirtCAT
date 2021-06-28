@@ -3,7 +3,7 @@
 #' Create a unique GUI session name from a string of characters
 #' 
 #' This is used in \code{\link{mirtCAT}} to create a random session name so that
-#' \code{shiny} knows which enviroment to select objects from when multiple CAT
+#' \code{shiny} knows which environment to select objects from when multiple CAT
 #' sessions have been initialized.
 #' 
 #' @param n number of upper/lower characters to sample
@@ -13,7 +13,7 @@
 #'   string
 #' 
 #' @export
-#' @return a list containing the internal enviromental components for mirtCAT
+#' @return a list containing the internal environmental components for mirtCAT
 createSessionName <- function(n = 30, datetime = TRUE){
     ret <- paste0(sapply(1:n, function(x) sample(c(LETTERS, letters), 1L)), collapse='')
     if(datetime) ret <- paste0(ret, "_", Sys.time())
@@ -21,7 +21,7 @@ createSessionName <- function(n = 30, datetime = TRUE){
 }
 
 
-#' Get the interal working enviroment state during mirtCAT session
+#' Get the internal working environment state during mirtCAT session
 #' 
 #' This function is used to access the internal state of the mirtCAT GUI session. 
 #' It is only useful when designing a customized GUI using the \code{shinyGUI$ui}
@@ -30,7 +30,7 @@ createSessionName <- function(n = 30, datetime = TRUE){
 #' @param sessionName the name of the session defined in \code{\link{mirtCAT}}
 #' 
 #' @export
-#' @return a list containing the internal enviromental components for mirtCAT
+#' @return a list containing the internal environmental components for mirtCAT
 get_mirtCAT_env <- function(sessionName) return(as.list(.MCE[[sessionName]]))
 
 FI <- function(mirt_item, Theta){
@@ -142,7 +142,7 @@ integrate.xy <- function(x,fx, a,b, use.spline = TRUE, xtol = 2e-8)
 buildShinyElements <- function(questions, itemnames, customTypes, choiceNames, choiceValues,
                                default = NULL){
     J <- length(questions$Type)
-    if(!all(sapply(questions[names(questions) != 'Rendered_Question'], is.character))) 
+    if(!all(sapply(questions[names(questions) != 'Rendered_Question'], is.character)))
         stop('Only character classes are supported in questions input', call.=FALSE)
     if(is.null(itemnames)) itemnames <- paste0('Item.', 1L:J)
     names <- names(questions)
@@ -251,10 +251,12 @@ buildShinyElements <- function(questions, itemnames, customTypes, choiceNames, c
                                     stringsAsFactors = FALSE)
             df_row$Rendered_Question <- NULL
             # TODO default is a problem if the timer re-evaluates the expression
-            if(!is.null(default)) 
+            if(!is.null(default))
                 stop('Internal error throw for customTypes with timer', call. = FALSE)
             Qs[[i]] <- customTypes[[nm]](inputId = itemnames[i], df_row=df_row)
         } else if(Type[i] == 'none'){
+            cs <- choices[i, !is.na(choices[i, ])]
+            choices_list[[i]] <- cs
             next
         }
     }
@@ -272,16 +274,16 @@ buildShinyElements <- function(questions, itemnames, customTypes, choiceNames, c
     return(ret)
 }
 
-formatTime <- function(delta){
+formatTime <- function(delta, delta_msg){
     hours <- delta %/% 3600
     mins <- delta %/% 60 - hours * 60
     secs <- ceiling(delta - hours * 60 - mins * 60)
     if(hours >= 1){
-        out <- sprintf('%s hour and %s minutes.', hours, mins)
+        out <- sprintf('%s %s %s %s.', hours,delta_msg[1],delta_msg[4],mins,delta_msg[2])
     } else if(mins >= 10){
-        out <- sprintf('%s minutes.', mins)
+        out <- sprintf('%s %s.', mins,delta_msg[2])
     } else {
-        out <- sprintf('%s minutes and %s seconds.', mins, secs)
+        out <- sprintf('%s %s %s %s %s', mins,delta_msg[2],delta_msg[4],secs,delta_msg[3])
     }
     out
 }
@@ -304,6 +306,9 @@ possible_pattern_thetas <- function(possible_patterns, test, method = 'EAP'){
                                     max_theta = test@fscores_args$max_theta))
     tmp
 }
+
+nativeTypes <- function() 
+    c('radio', 'select', 'text', 'testArea', 'slider', 'checkbox', 'rankselect')
 
 stemContent <- function(pick, sessionName){
     if(!is.na(.MCE[[sessionName]]$shinyGUI$stem_expressions[pick])){
@@ -342,7 +347,7 @@ verifyPassword <- function(input, password, sessionName){
             FALSE
         } else {
             .MCE[[sessionName]]$person$login_name <- user
-            pswd %in% tmp[,-1L]
+            pswd %in% tmp[,2L]
         }
     }
     verified
@@ -351,4 +356,23 @@ verifyPassword <- function(input, password, sessionName){
 deepCopyPerson <- function(ref){
     copy <- ref$copy()
     copy
+}
+
+
+
+setDebug <- function(level=1){
+    if(level > 1){
+        .MCE$DEBUG <- TRUE
+        .MCE$debug_level <- level
+    } else .MCE$DEBUG <- NULL
+    invisible(NULL)
+}
+
+printDebug <- function(msg, level = 1){
+    if(!is.null(.MCE$DEBUG)){
+        if(.MCE$debug_level >= 1 && level == 1) cat('L1: Printed from', msg, "\n\n")
+        if(.MCE$debug_level >= 2 && level == 2) cat('.. L2: Printed from', msg, "\n")
+        if(.MCE$debug_level >= 3 && level == 3) cat('... L3: Printed from', msg, "\n")
+    }
+    invisible(NULL)
 }

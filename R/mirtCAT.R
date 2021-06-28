@@ -101,6 +101,12 @@
 #'       prior to continuing. Naturally, this requires that one or more \code{Answers} are provided,
 #'       or suitable functions for scoring are supplied}
 #'       
+#'     \item{\code{HTMLOptions}}{(Optional) a logical vector indicating whether the respective
+#'       \code{Option.#} terms should be wrapped within an \code{\link{HTML}} function and rendered
+#'        for suitable shiny inputs (e.g., radio buttons). This is a short-hand wrapper to the more
+#'        flexible \code{choiceNames} approach, which can be used to wrap option inputs with alternative 
+#'        functions.}
+#'       
 #'     \item{\code{...}}{In cases where \code{'slider'} inputs are used instead only 
 #'       the \code{Question} input is required along with (at minimum) a 
 #'       \code{min}, \code{max}, and \code{step} column. In rows where the \code{Type == 'slider'} the 
@@ -227,7 +233,7 @@
 #'   
 #' @param progress logical; print a progress bar to the console 
 #'   with the \code{pbapply} package for given response patterns? Useful for 
-#'   guaging how long Monte Carlo simulations will take to finish
+#'   gauging how long Monte Carlo simulations will take to finish
 #'   
 #' @param design a list of design based control parameters for adaptive and non-adaptive tests. 
 #'   These can be
@@ -455,6 +461,18 @@
 #'     The second part of the character vector provides the name for the action button.
 #'   }
 #'
+#'   \item{\code{itemtimer}}{A character string to display the item-timer clock. Default is 
+#'     \code{'Item timer: '}}
+#'
+#'   \item{\code{incorrect}}{A character string to display in case of a failed response. Default is 
+#'     \code{'The answer provided was incorrect. Please select an alternative.'}}
+#'     
+#'   \item{\code{failpass}}{A character string to display in case of a failed password input. Default is 
+#'     \code{'Incorrect Login Name/Password. Please try again (you have \%s attempts remaining).'}}
+#'     
+#'   \item{\code{timemsg}}{A three part character vector indicating words for hour, minute, second & and. Default is 
+#'     \code{c('hour ','minutes ','seconds ', 'and ')}}
+#'
 #'   \item{\code{firstpage}}{The first page of the shiny GUI. Default prints the title
 #'     and information message. 
 #'     
@@ -551,7 +569,7 @@
 #'          represents the user name and all other columns as the same as the first option. 
 #'          E.g., if two users ('name1' and 'name2') 
 #'          are given the same password '1234' then 
-#'          \code{password = data.frame(user = c('user1', 'user2'), password = rep('1234', 2))}}      
+#'          \code{password = data.frame(User = c('user1', 'user2'), Password = rep('1234', 2))}}      
 #'      }
 #'    }
 #'    
@@ -727,7 +745,7 @@
 #' summary(res_MI)
 #' 
 #' #-----------------------------------------
-#' # HTML tags for better customization, coerced to characters for compatability
+#' # HTML tags for better customization, coerced to characters for compatibility
 #' 
 #' # help(tags, package='shiny')
 #' options <- matrix(c("Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"),
@@ -806,7 +824,11 @@ mirtCAT <- function(df = NULL, mo = NULL, method = 'MAP', criteria = 'seq',
         return(ret)
     }
     if(GUI){
-        runApp(createShinyGUI(ui=.MCE[[sessionName]]$shinyGUI$ui, host_server = FALSE),  
+        if(any(dir() == 'www')){
+            dirname <- paste0(getwd(), '/www')
+            shiny::addResourcePath('www', dirname)
+        }
+        shiny::runApp(createShinyGUI(ui=.MCE[[sessionName]]$shinyGUI$ui, host_server = FALSE),  
                launch.browser=TRUE, ...)
         person <- .MCE[['COMPLETED']]$person
         force(.MCE[['COMPLETED']] <- NULL) # as early as possible
