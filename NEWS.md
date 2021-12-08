@@ -1,4 +1,7 @@
-# mirtCAT 1.11
+# mirtCAT 1.12
+
+- Added `design` information to include the sequential probability ratio test for 
+  classification purposes. Currently limited to unidimensional models only
 
 - Fix Fisher information bug in unidimensional graded response model applications 
   (reported by Felix Fischer)
