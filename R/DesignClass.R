@@ -105,7 +105,7 @@ setMethod("initialize", signature(.Object = "Design"),
               .Object@CAT_criteria <- criteria
               .Object@CAT_method <- method
               .Object@start_item <- as.integer(start_item)
-              if(!is.nan(start_item) && .Object@start_item != 1 && criteria == 'seq' && 
+              if(!all(is.nan(start_item)) && all(.Object@start_item != 1) && criteria == 'seq' && 
                  is.null(design$customNextItem))
                   stop('start_item must equal 1 with seq criteria', call.=FALSE)
               if(nfact > 1L && 
@@ -212,7 +212,7 @@ setMethod("initialize", signature(.Object = "Design"),
                   if(!is.null(design$exposure)){
                       if(length(design$exposure) != nitems)
                           stop('exposure vector length not equal to number of items', call.=FALSE)
-                      exposure_type <- ifelse(all(design$exposure <= 1 && design$exposure >= 0), 
+                      exposure_type <- ifelse(all(design$exposure <= 1 & design$exposure >= 0), 
                                               'SH', 'sample')
                       exposure <- if(exposure_type == 'SH') design$exposure 
                       else as.integer(design$exposure)

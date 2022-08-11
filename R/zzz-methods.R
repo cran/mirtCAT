@@ -73,7 +73,7 @@ summary.mirtCAT <- function(object, sort = TRUE, ...){
     if(all(is.na(scored_responses))) ret$scored_responses <- NULL
     if(sum(object$item_time) > 0)
         ret$item_time <- object$item_time[pick]
-    if(length(ret$thetas_history) == 1L || is.na(ret$thetas_history))
+    if(length(ret$thetas_history) == 1L || all(is.na(ret$thetas_history)))
         ret$thetas_history <- ret$thetas_SE_history <- NULL
     if(!length(object$demographics))
         ret$demographics <- NULL
@@ -114,7 +114,7 @@ plot.mirtCAT <- function(x, pick_theta = NULL, true_thetas = TRUE, SE = 1, main 
                          par.settings = list(strip.background = list(col = '#9ECAE1'),
                                              strip.border = list(col = "black")),
                          scales=list(x = list(rot=90)), ...){
-    if(length(x$thetas_SE_history) == 1L || is.na(x$thetas_SE_history))
+    if(length(x$thetas_SE_history) == 1L || all(is.na(x$thetas_SE_history)))
         stop('plot not available for non-adaptive tests', call.=FALSE)
     p <- ceiling((1-(pnorm(-abs(SE))*2))*100)
     if(is.null(main)){

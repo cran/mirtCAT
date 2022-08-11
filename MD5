@@ -1,7 +1,7 @@
-9e225d8c78cbc829dff72d33aefe0148 *DESCRIPTION
+33df3546fb2d06b00ebe2f34b2d4c33d *DESCRIPTION
 30d782fee34e5fdaef8a3e6f6d50f08c *NAMESPACE
 502ed39a79daa34c9a6085befda8d2f6 *NEWS.md
-5669421eb82723c52f017a99287d1c44 *R/DesignClass.R
+132b1177a384374530aaa2e6b931bd72 *R/DesignClass.R
 ee65c7fa5ad100b3b9e7f3589edc76e1 *R/PersonClass.R
 46465d6a06878800908de4b1044ee743 *R/ShinyGUIClass.R
 ac8c75ea461219f2246166ff6c0b86b4 *R/TestClass.R
@@ -17,14 +17,14 @@ eaef6d3b4e8a241f36893ccf9bbf7539 *R/mirtCAT.R
 1b789917d62e06c48532aeb22a2d97ae *R/mirtCAT_preamble.R
 fd2eec783e563094e06ed58f67425664 *R/run_pattern.R
 6b0ab86e52fa557ca001dbb104f450b6 *R/selection_criteria.R
-270a9976952dd8fc6c27a277a24e6d9c *R/server.R
+5cb0a617911c2726d749e80b9e5053ae *R/server.R
 dd2c8a15f44fedf6e58feff93da93e2d *R/ui.R
 f3cbe9849a506e17e92308d4d93f968f *R/updateDesign.R
 06a0db941b46ede59e251702c8ac5eed *R/util.R
-93cc7b651e0f590bc034f165b7182b07 *R/zzz-methods.R
+a6eb7e518aae854d8c3857a4d3a403ff *R/zzz-methods.R
 8573a8738187b2e496db0aa2026944ae *README.md
-a9406b6402f0f79da7c9929d4d883316 *build/partial.rdb
-d95b96898d13842d3049004692c29d25 *build/vignette.rds
+439bf689fa27cf9affd0335332142165 *build/partial.rdb
+b6d32c1641e05f2d900a23fd55aec9f8 *build/vignette.rds
 05cc1f7a7d9040d66758ea8f76b04945 *inst/CITATION
 cd2678ca33a8f92476297c00f6308183 *inst/doc/mirtCAT-vignettes.Rmd
 1945e2bce2b09d99e760aeef80737d54 *inst/doc/mirtCAT-vignettes.html
@@ -46,7 +46,7 @@ b520f626b999844a85d66b52181d90a0 *src/CAT_functions.cpp
 a73031cbe7d6aaf0bd22e20f6526977d *src/Makevars.win
 e8b8b5b396abfda70de4cf756944e908 *src/item_functions.cpp
 f36c327dbebf0d03df92e0d8dc9ab4cf *src/item_functions.h
-3371ab74251508d3b6a0d6894f4ec302 *tests/GUI-tests/GUI-tests.R
+0636c85ccf42079933c21fa0d8f656c4 *tests/GUI-tests/GUI-tests.R
 c3f5921cb6519408c5b6016191c61dff *tests/GUI-tests/Math-stem.html
 9028652b261552e7a8bbaa413b4d26aa *tests/GUI-tests/Question.md
 01f73c876637c33a66537ecedd54c2f5 *tests/GUI-tests/Table-stem.html
