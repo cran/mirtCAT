@@ -56,14 +56,14 @@ mirtCAT(
   
     \item{\code{Type}}{Indicates the type of response input 
       to use from the shiny package. The supported types are: \code{'radio'} for radio buttons 
-      (\code{\link{radioButtons}}), \code{'select'} for a pull-down box for selecting 
-      inputs (\code{\link{selectInput}}), \code{'rankselect'} for a set of pull-down boxes rank-ordering
-      inputs (\code{\link{selectInput}}) associated with each option supplied, 
+      (\code{\link[shiny]{radioButtons}}), \code{'select'} for a pull-down box for selecting 
+      inputs (\code{\link[shiny]{selectInput}}), \code{'rankselect'} for a set of pull-down boxes rank-ordering
+      inputs (\code{\link[shiny]{selectInput}}) associated with each option supplied, 
       \code{'text'} and \code{'textArea'} for requiring 
-      typed user input (\code{\link{textInput}} and \code{\link{textAreaInput}}), 
+      typed user input (\code{\link[shiny]{textInput}} and \code{\link[shiny]{textAreaInput}}), 
       \code{'checkbox'} for allowing multiple 
-      responses to be checked off (\code{\link{checkboxGroupInput}}),
-      \code{'slider'} for generating slider inputs (\code{\link{sliderInput}}), or
+      responses to be checked off (\code{\link[shiny]{checkboxGroupInput}}),
+      \code{'slider'} for generating slider inputs (\code{\link[shiny]{sliderInput}}), or
       \code{'none'} for presenting only an item stem with no selection options. Note that slider
       inputs require additional arguments to be passed; see \code{...} instructions below).
       
@@ -76,7 +76,7 @@ mirtCAT(
       to use on an as-per-needed basis.} 
     
     \item{\code{Question}}{A character vector containing all the questions or stems to be generated.
-      By default these character vectors are passed to \code{\link{HTML}}, and therefore allow for 
+      By default these character vectors are passed to \code{\link[shiny]{HTML}}, and therefore allow for 
       HTML tags to be included directly. For example, the following example defines two stems, 
       where the second uses an emphasis tag to provide italics.
       
@@ -112,7 +112,21 @@ mirtCAT(
       
     \item{\code{Answer} or \code{Answer.#}}{(Optional) A character vector (or multiple character
       vectors) indicating the scoring key for items that have correct answer(s). If there
-      is no correct answer for a question then a value of \code{NA} must be declared.}
+      is no correct answer for a question then a value of \code{NA} must be declared.
+      
+      Note that 'scoring' some item response data can be ambiguous depending on the stimuli provided, which 
+      requires greater attention. For example, when using \code{'rankselect'}: should partial scoring 
+      be used if the ranks are mostly correct; should partial scoring be used if the response are 
+      only off by a ranking constant (e.g., correct rank is 1-2-3-4-5, but the respondent ranks 2-3-4-5-1, in which
+      case four relative rankings are correct but 1 is incorrect); should a 0-1 scoring be used to indicate none-all correct?. 
+      When this type of ambiguity exists in the multiple-answers cases it is strongly recommended 
+      to use the \code{AnswerFuns} argument instead for better functional control}
+      
+   \item{\code{Forced}}{(Optional) logical vector indicating whether the respondent is 
+     forced (\code{TRUE}) or not (\code{FALSE}) to include a response for the respective item.
+     If omitted from the \code{df} definition this will be automatically set to \code{TRUE}
+     for each item. For surveys, it is generally recommended to set this to \code{FALSE} to
+     allow respondents the ability to not answer questions they may be uncomfortable answering} 
       
     \item{\code{Stem}}{(Optional) a character vector of absolute or relative paths 
       pointing external markdown (.md) or HTML (.html) files to be used as item stems. 
@@ -122,14 +136,14 @@ mirtCAT(
       for each respective item. If a response is not provided before this limit then the question
       will automatically advance to the next selected item. The values \code{NA} and \code{Inf}
       indicate no time limit for the respective items. Note that this option can only be used 
-      when \code{shinyGUI = list(forced_choice = FALSE)}}
+      when \code{df$Forced = TRUE}}
       
     \item{\code{Mastery}}{(Optional) a logical vector indicating whether the item must be mastered
       prior to continuing. Naturally, this requires that one or more \code{Answers} are provided,
       or suitable functions for scoring are supplied}
       
     \item{\code{HTMLOptions}}{(Optional) a logical vector indicating whether the respective
-      \code{Option.#} terms should be wrapped within an \code{\link{HTML}} function and rendered
+      \code{Option.#} terms should be wrapped within an \code{\link[shiny]{HTML}} function and rendered
        for suitable shiny inputs (e.g., radio buttons). This is a short-hand wrapper to the more
        flexible \code{choiceNames} approach, which can be used to wrap option inputs with alternative 
        functions.}
@@ -137,7 +151,7 @@ mirtCAT(
     \item{\code{...}}{In cases where \code{'slider'} inputs are used instead only 
       the \code{Question} input is required along with (at minimum) a 
       \code{min}, \code{max}, and \code{step} column. In rows where the \code{Type == 'slider'} the 
-      column names will correspond to the input arguments to \code{\link{sliderInput}}. 
+      column names will correspond to the input arguments to \code{\link[shiny]{sliderInput}}. 
       Other input column options such as \code{step}, \code{round}, \code{pre}, \code{post}, 
       \code{ticks}, \code{inline}, \code{placeholder}, \code{width}, and \code{size} 
       are also supported for the respective input types.} 
@@ -148,7 +162,7 @@ mirtCAT(
 if the test is to be scored adaptively or non-adaptively, but not required for general 
 questionnaires. The object can be constructed by using the 
 \code{\link{generate.mirt_object}} function if population parameters are known or by
-including a calibrated model estimated from the \code{\link{mirt}} function with real data.}
+including a calibrated model estimated from the \code{\link[mirt]{mirt}} function with real data.}
 
 \item{method}{argument passed to \code{mirt::fscores()} for computing new scores in the CAT 
 stage, with the addition of a \code{'fixed'} input to keep the latent trait estimates
@@ -242,7 +256,7 @@ declared in the a \code{df$Type} input. The functions defined must be of the for
 \preformatted{myDOGS <- function(inputId, df_row) ...}
 
 and must return, at the very minimum, an associated \code{shiny} input object that makes use of the
-\code{inputId} argument (e.g., \code{\link{radioButtons}}). Any valid shiny object can be returned,
+\code{inputId} argument (e.g., \code{\link[shiny]{radioButtons}}). Any valid shiny object can be returned,
 including lists of shiny objects. As well, the \code{df_row} argument contains
 any extra information the users wishes to obtain from the associated row in the \code{df} object. 
 
@@ -257,7 +271,13 @@ good_dogs <- function(inputId, df_row){
    
 df <- data.frame(Question = '', ..., Type = 'Doug') 
 results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
-}}
+}
+
+\emph{IMPORTANT}: When using the custom inputs the select defined \code{Type} must be unique,
+even when the function defined (e.g., \code{good_dog} above) is recycled. Hence, if two items
+were to use the \code{good_dog} function then \code{df} should be defined as something like
+\code{df$Type <- c('Doug1', 'Doug2')} with the associated 
+\code{customTypes = list(Doug1=good_dog, Doug2=good_dog)}}
 
 \item{design}{a list of design based control parameters for adaptive and non-adaptive tests. 
   These can be
@@ -287,7 +307,7 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
     600 should be passed (10 * 60). Default is \code{Inf}, therefore no time limit}
   
   \item{\code{quadpts}}{Number of quadrature points used per dimension 
-    for integration (if required). Default is identical to scheme in \code{\link{fscores}}}
+    for integration (if required). Default is identical to scheme in \code{\link[mirt]{fscores}}}
   
   \item{\code{theta_range}}{upper and lower range for the theta 
     integration grid. Used in conjunction with \code{quadpts} to generate an equally spaced 
@@ -433,7 +453,7 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
      
     This argument contains an optional user-defined function of the form \code{function(design, person, test)} 
     that returns a \code{data.frame} containing the left hand side, relationship, and right hand side
-    of the constraints for \code{\link{lp}}. 
+    of the constraints for \code{\link[lpSolve]{lp}}. 
     Each row corresponds to a constraint, while the number of columns should be 
     equal to the number of items plus 2. Note that the column names of the 
     returned \code{data.frame} object do not matter. 
@@ -548,8 +568,8 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
     the \code{demographics} default}
     
   \item{\code{stem_default_format}}{\code{shiny} function used for the stems of the items. Default uses the 
-    \code{\link{HTML}} wrapper, allowing for HTML tags to be included directly in the character vector 
-    definitions. To change this to something different, like \code{\link{h5}} for example, 
+    \code{\link[shiny]{HTML}} wrapper, allowing for HTML tags to be included directly in the character vector 
+    definitions. To change this to something different, like \code{\link[shiny]{h5}} for example, 
     pass \code{stem_default_format = shiny::h5} to the \code{shinyGUI} list}
     
   \item{\code{temp_file}}{a character vector indicating where a temporary .rds file 
@@ -579,11 +599,10 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
    \item{\code{theme}}{a character definition for the \code{shinytheme} package to globally change 
      the GUI theme}
      
-   \item{\code{forced_choice}}{logical; require a response to each item? Default is \code{TRUE}.
-     This should only be set to \code{FALSE} for surveys (not CATs)}
-     
    \item{\code{choiceNames}}{a list containing the \code{choiceNames} input for each respective item when
-     the input is 'radio' or 'checkbox' (see \code{\link{radioButtons}}). 
+     the input is 'radio' or 'checkbox' (see \code{\link[shiny]{radioButtons}}), where each
+     element is itself a list of instructions. 
+     
      This is used to modify the output of the controllers using 
      suitable HTML code. If a row in \code{df} should not have a customized names then supplying 
      the value \code{NULL} in the associated list element will use the standard inputs instead. 
@@ -593,7 +612,7 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
    \item{\code{choiceValues}}{associated values to be used along with \code{choiceNames} (see above)}
      
    \item{\code{time_before_answer}}{a numeric value representing the number of seconds that must have elapsed
-     when \code{forced_choice = FALSE} before a response can be provided or skipped. This is used 
+     when \code{df$Forced = FALSE} before a response can be provided or skipped. This is used 
      to control accidental skips over items when responses are not forced. Default is 1, indicating
      one full second}
      
@@ -643,8 +662,8 @@ results <- mirtCAT(df=df, customTypes = list(Doug = good_dogs))
       Default is FALSE}
 }}
 
-\item{...}{additional arguments to be passed to \code{\link{mirt}}, \code{\link{fscores}}, 
-\code{\link{runApp}}, or \code{lattice}}
+\item{...}{additional arguments to be passed to \code{\link[mirt]{mirt}}, \code{\link[mirt]{fscores}}, 
+\code{\link[shiny]{runApp}}, or \code{\link[lattice]{lattice}}}
 
 \item{x}{object of class \code{'mirtCAT'}}
 
@@ -668,11 +687,11 @@ standard error. To obtain the 95\% interval use \code{SE = 1.96} (from the z-dis
 \item{main}{title of the plot. Will default to \code{'CAT Standard Errors'} or 
 \code{'CAT ##\% Confidence Intervals'} depending on the SE input}
 
-\item{par.strip.text}{plotting argument passed to \code{\link{lattice}}}
+\item{par.strip.text}{plotting argument passed to \code{\link[lattice]{lattice}}}
 
-\item{par.settings}{plotting argument passed to \code{\link{lattice}}}
+\item{par.settings}{plotting argument passed to \code{\link[lattice]{lattice}}}
 
-\item{scales}{plotting argument passed to \code{\link{lattice}}}
+\item{scales}{plotting argument passed to \code{\link[lattice]{lattice}}}
 }
 \value{
 Returns a list object of class \code{'Person'} containing the following elements:
@@ -712,10 +731,10 @@ Returns a list object of class \code{'Person'} containing the following elements
 }
 \description{
 Provides tools to generate an HTML interface for creating adaptive and 
-non-adaptive educational and psychological tests using the \code{shiny} package. 
+non-adaptive educational and psychological tests using the \code{\link[shiny]{shiny}} package. 
 Suitable for applying unidimensional and multidimensional computerized adaptive tests 
-using item response theory methodology. Test scoring is performed using the \code{mirt} package.
-However, if no scoring is required (i.e., a standard survey) then defining a \code{mirt} 
+using item response theory methodology. Test scoring is performed using the \code{\link[mirt]{mirt}} package.
+However, if no scoring is required (i.e., a standard survey) then defining a \code{\link[mirt]{mirt}} 
 object may be omitted.
 }
 \details{
